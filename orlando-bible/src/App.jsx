@@ -6,6 +6,7 @@ import TabBar from "./components/TabBar";
 import Plan from "./modules/Plan";
 import BudgetCalculator from "./modules/BudgetCalculator";
 import StayDecider from "./modules/StayDecider";
+import TicketDecoder from "./modules/TicketDecoder";
 import ComingSoon from "./modules/ComingSoon";
 
 export default function App() {
@@ -17,16 +18,7 @@ export default function App() {
             <Route path="/" element={<Plan />} />
             <Route path="/budget" element={<BudgetCalculator />} />
             <Route path="/stay" element={<StayDecider />} />
-            <Route
-              path="/tickets"
-              element={
-                <ComingSoon
-                  title="Tickets, decoded."
-                  subtitle="The most confusing — and most overspent — decision of the lot."
-                  blurb="The Ticket Decoder is the next module: how many days you actually need, whether Park Hopper earns its place, Disney-plus-Universal combinations, and where to buy without paying the markup."
-                />
-              }
-            />
+            <Route path="/tickets" element={<TicketDecoder />} />
             <Route
               path="/more"
               element={
