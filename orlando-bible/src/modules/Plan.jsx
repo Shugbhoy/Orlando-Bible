@@ -6,7 +6,7 @@ import Header from "../components/Header";
 const MODULES = [
   { to: "/budget", title: "Budget Calculator", desc: "Your honest all-in cost in pounds, hidden extras and all.", ready: true, icon: "coins" },
   { to: "/stay", title: "Stay Decider", desc: "Villa or on-site? Settle it for your exact trip.", ready: true, icon: "bed" },
-  { to: "/tickets", title: "Ticket Decoder", desc: "How many days, Park Hopper, where to buy — without the markup.", ready: false, icon: "ticket" },
+  { to: "/tickets", title: "Ticket Decoder", desc: "How many days, Park Hopper, where to buy — without the markup.", ready: true, icon: "ticket" },
 ];
 
 export default function Plan() {
