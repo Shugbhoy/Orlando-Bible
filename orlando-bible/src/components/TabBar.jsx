@@ -11,6 +11,7 @@ function TabIcon({ name, on }) {
     ticket: (<><path d="M3 8a2 2 0 012-2h14a2 2 0 012 2 2 2 0 000 4 2 2 0 000 4 2 2 0 01-2 2H5a2 2 0 01-2-2 2 2 0 000-4 2 2 0 000-4z" {...p} /><path d="M14 6v12" strokeDasharray="2 2" {...p} /></>),
     bed: (<><path d="M3 18v-6h18v6M3 12V8a2 2 0 012-2h5a2 2 0 012 2v4M3 18h18" {...p} /></>),
     dots: (<><circle cx="5" cy="12" r="1.6" fill={col} /><circle cx="12" cy="12" r="1.6" fill={col} /><circle cx="19" cy="12" r="1.6" fill={col} /></>),
+    tag: (<><path d="M3 7a2 2 0 012-2h6l8 8a2 2 0 010 3l-5 5a2 2 0 01-3 0l-8-8z" {...p} /><circle cx="8.5" cy="9.5" r="1.4" fill={col} stroke="none" /></>),
   };
   return <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">{shapes[name]}</svg>;
 }
@@ -20,7 +21,7 @@ const TABS = [
   { to: "/budget", label: "Budget", icon: "coins" },
   { to: "/tickets", label: "Tickets", icon: "ticket" },
   { to: "/stay", label: "Stay", icon: "bed" },
-  { to: "/more", label: "More", icon: "dots" },
+  { to: "/deals", label: "Deals", icon: "tag" },
 ];
 
 export default function TabBar() {
