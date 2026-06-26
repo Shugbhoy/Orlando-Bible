@@ -7,6 +7,8 @@ import Plan from "./modules/Plan";
 import BudgetCalculator from "./modules/BudgetCalculator";
 import StayDecider from "./modules/StayDecider";
 import TicketDecoder from "./modules/TicketDecoder";
+import DealsTips from "./modules/DealsTips";
+import Itinerary from "./modules/Itinerary";
 import ComingSoon from "./modules/ComingSoon";
 
 export default function App() {
@@ -19,16 +21,8 @@ export default function App() {
             <Route path="/budget" element={<BudgetCalculator />} />
             <Route path="/stay" element={<StayDecider />} />
             <Route path="/tickets" element={<TicketDecoder />} />
-            <Route
-              path="/more"
-              element={
-                <ComingSoon
-                  title="More to come."
-                  subtitle="The Orlando Bible is being built module by module."
-                  blurb="Money setup and tipping, driving and tolls, beyond-the-parks days, and the Disney cruise + parks combo are all on the roadmap."
-                />
-              }
-            />
+            <Route path="/deals" element={<DealsTips />} />
+            <Route path="/itinerary" element={<Itinerary />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <TabBar />
