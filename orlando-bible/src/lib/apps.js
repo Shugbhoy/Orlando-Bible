@@ -1,10 +1,10 @@
 // The Orlando Bible — "Before You Fly" apps.
-// Tiered so a scary 30-app list becomes "do these first, these are nice-to-have."
+// Tiered so a scary app list becomes "do these first, these are nice-to-have."
 //
-// LINKS: url opens the official site (which routes to the right app store).
-// Where url is null, it renders as plain text with a "search your app store" hint.
-// Swap any url for an affiliate link later — one edit per line.
-// Entries marked confirm:true are ones to double-check before going public.
+// LINKS: url opens the official site (which routes to the right app store), OR
+// with store:true, a neutral app-store search that works on any phone from the
+// UK (used for geo-blocked or US-only apps). Where url is null it renders as
+// plain text with a hint. Swap any url for an affiliate link later.
 
 export const APP_TIERS = [
   {
@@ -24,11 +24,6 @@ export const APP_TIERS = [
       { name: "Flighty", what: "Live flight tracking — you'll know about delays before the airline tells you.", url: "https://www.flighty.com" },
       { name: "eSIM (Airalo / Saily / Holafly)", what: "Cheap US data set up before you fly — and it's your sat nav too.", url: "https://www.airalo.com" },
       { name: "Fee-free card (Revolut / Chase UK / Starling)", what: "Pay in dollars without the bank skimming FX. Or use your own, like Halifax paying in $.", url: "https://www.revolut.com" },
-      { name: "Chick-fil-A", what: "Order ahead and rewards — but note, closed Sundays!", url: "https://www.chick-fil-a.com" },
-      { name: "McDonald's", what: "App-only deals and free items.", url: "https://www.mcdonalds.com" },
-      { name: "Wendy's", what: "Deals, the Frosty, and the 4-for-$4.", url: "https://www.wendys.com" },
-      { name: "Chipotle", what: "Order ahead and skip the line.", url: "https://www.chipotle.com" },
-      { name: "Panera Bread", what: "Order ahead and rewards.", url: "https://www.panerabread.com" },
     ],
   },
   {
@@ -39,7 +34,6 @@ export const APP_TIERS = [
       { name: "Undercover Tourist Wait Times", what: "Free live wait times across every park.", url: "https://www.undercovertourist.com" },
       { name: "Mouse Dining", what: "Alerts you when hard-to-get Disney dining reservations open up.", url: null, confirm: true },
       { name: "The Weather Channel", what: "Florida's afternoon storms are no joke — plan around them.", url: "https://weather.com" },
-      { name: "Groupon", what: "Discounts on dining, mini-golf and smaller attractions.", url: "https://www.groupon.com" },
       { name: "Yelp", what: "Reviews for the good restaurants off the tourist strip.", url: "https://www.yelp.com" },
       { name: "Walmart", what: "Order the day-one grocery stock-up for the villa.", url: "https://www.walmart.com" },
       { name: "Publix", what: "The beloved Florida supermarket — great subs, better quality.", url: "https://www.publix.com" },
@@ -52,6 +46,18 @@ export const APP_TIERS = [
       { name: "XE Currency", what: "Live exchange rates at a glance.", url: "https://www.xe.com" },
       { name: "Aldi", what: "Cheap groceries, familiar from home.", url: "https://www.aldi.us" },
       { name: "Kennedy Space Center", what: "Tickets and show times for the excursion day.", url: "https://www.kennedyspacecenter.com" },
+    ],
+  },
+  {
+    tier: "Once you land",
+    blurb: "US fast-food and deals apps live in the US app store, so grab these once you're there — they're where the app-only savings hide.",
+    apps: [
+      { name: "Chick-fil-A", what: "Order ahead and rewards — but note, closed Sundays!", url: "https://www.google.com/search?q=Chick-fil-A+app", store: true },
+      { name: "McDonald's", what: "App-only deals and free items.", url: "https://www.google.com/search?q=McDonalds+app+USA", store: true },
+      { name: "Wendy's", what: "Deals, the Frosty, and the 4-for-$4.", url: "https://www.google.com/search?q=Wendys+app+USA", store: true },
+      { name: "Chipotle", what: "Order ahead and skip the line.", url: "https://www.google.com/search?q=Chipotle+app", store: true },
+      { name: "Panera Bread", what: "Order ahead and rewards.", url: "https://www.google.com/search?q=Panera+Bread+app", store: true },
+      { name: "Groupon", what: "US discounts on dining, mini-golf and smaller attractions.", url: "https://www.google.com/search?q=Groupon+app+USA", store: true },
     ],
   },
 ];
