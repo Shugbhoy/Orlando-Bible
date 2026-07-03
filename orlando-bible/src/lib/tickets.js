@@ -1,113 +1,85 @@
-// The Orlando Bible — ticket model.
-// Two resorts, each with its own logic. Indicative 2026 GBP estimates from a
-// UK-reseller starting point (£1 ≈ $1.27). Edit freely — the value is the
-// decision logic and the honesty, not penny-accurate prices.
+// The Orlando Bible — ticket model, built around the Smart Combo strategy.
+//
+// THE STRATEGY: on a two-week trip you don't need 14-day tickets. You need a
+// Disney base ticket (4 days is the sweet spot) + a Universal 3-park short
+// ticket + ONE night at a Premier hotel, which hands everyone in the room free
+// Universal Express across the check-in AND check-out days. That beats two
+// 14-day tickets on price AND gets the skip-the-line the 14-day buyers pay extra for.
+//
+// Figures are indicative 2026 GBP at ~$1.27 (pay in dollars on a fee-free card).
+// Edit freely.
 
 import { gbp } from "./budget";
 export { gbp };
 
 export const TCONFIG = {
   fx: 1.27,
-  longTripNights: 10, // at/above this, UK 14-day tickets are the sweet spot
-  gateMarkup: 1.18, // gate prices ~18% above a UK reseller
-  disney: {
-    // per person, by how many Disney days you need
-    bands: [
-      { max: 3, adult: 330, child: 315 },
-      { max: 5, adult: 430, child: 410 },
-      { max: 9, adult: 510, child: 490 },
-      { max: 99, adult: 575, child: 555 }, // 10-14 day territory
-    ],
-    hopperAddon: 75, // per person, only when not already bundled
-    waterPark: 60,
+  disneyDiscount: 0.20, // live 20% offer — set to 0 when it ends
+  // Disney base tickets, per person, GBP, BEFORE discount
+  disneyBase: {
+    3: { adult: 355, child: 340 },
+    4: { adult: 395, child: 380 },
+    5: { adult: 425, child: 410 },
+    7: { adult: 475, child: 455 },
   },
-  universal: {
-    bands2: [
-      { max: 2, adult: 235, child: 225 },
-      { max: 5, adult: 330, child: 315 },
-      { max: 99, adult: 400, child: 385 },
-    ],
-    bands3: [
-      // includes Epic Universe (the new third park)
-      { max: 2, adult: 305, child: 290 },
-      { max: 5, adult: 415, child: 400 },
-      { max: 99, adult: 485, child: 465 },
-    ],
-    p2pAddon: 60, // Park-to-Park (needed for the Hogwarts Express hop)
-    volcanoBay: 55,
+  disney14: { adult: 620, child: 595 },
+  // Universal 3-park (Studios, Islands of Adventure, Epic), per person
+  uni3park: {
+    2: { adult: 300, child: 290 },
+    3: { adult: 355, child: 345 },
   },
+  uni14: { adult: 460, child: 445 },
+  royalPacificNight: 400, // one night, whole family — unlocks free Express both days
+  expressValuePerPersonDay: 180, // what Express would cost pp/day if bought
+  bookingSources: ["Booking.com", "Trivago", "loveholidays", "Universal direct"],
 };
 
-const pick = (bands, days) => bands.find((b) => days <= b.max) || bands[bands.length - 1];
-
-// Suggested split of park days from the trip profile.
-export function recommendDays(profile) {
-  const total = Math.max(1, Math.min(14, Math.round(profile.nights * 0.65)));
-  if (profile.focus === "disney") return { disney: total, universal: 0 };
-  if (profile.focus === "universal") return { disney: 0, universal: total };
-  const disney = Math.max(1, Math.round(total * 0.6));
-  const universal = Math.max(1, total - disney);
-  return { disney, universal };
-}
-
-// L = local inputs: { disneyDays, universalDays, hopper, p2p, epic, disneyWater, uniWater, kids10plus }
+// L = { disneyDays, universalDays, kids10plus, disneyDiscount, expressHack }
 export function computeTickets(profile, L) {
-  const long = profile.nights >= TCONFIG.longTripNights;
   const adultEq = profile.adults + profile.teens + L.kids10plus; // 10+ pay adult
-  const childEq = Math.max(0, profile.children - L.kids10plus); // ages ~3-9
+  const childEq = Math.max(0, profile.children - L.kids10plus); // ages 3–9
   const heads = adultEq + childEq;
+  const disc = L.disneyDiscount ? 1 - TCONFIG.disneyDiscount : 1;
+
+  // --- Smart Combo ---
+  const dBase = TCONFIG.disneyBase[L.disneyDays] || TCONFIG.disneyBase[4];
+  const disneyCost = (dBase.adult * adultEq + dBase.child * childEq) * disc;
+
+  const uBase = TCONFIG.uni3park[L.universalDays] || TCONFIG.uni3park[3];
+  const universalCost = uBase.adult * adultEq + uBase.child * childEq;
+
+  const hotel = L.expressHack ? TCONFIG.royalPacificNight : 0;
+  const smartTotal = disneyCost + universalCost + hotel;
+
+  // --- 14-day alternative (the pricier default most people buy) ---
+  const alt14 =
+    TCONFIG.disney14.adult * adultEq + TCONFIG.disney14.child * childEq +
+    TCONFIG.uni14.adult * adultEq + TCONFIG.uni14.child * childEq;
+
+  const saving = Math.max(0, alt14 - smartTotal);
+
+  // Express value the £400 night unlocks (everyone, two days)
+  const expressValue = L.expressHack ? heads * TCONFIG.expressValuePerPersonDay * 2 : 0;
+
+  const smartLines = [
+    { k: `Disney ${L.disneyDays}-day base`, v: disneyCost, note: L.disneyDiscount ? "20% live discount applied" : "no discount applied" },
+    { k: `Universal ${L.universalDays}-day, 3 parks`, v: universalCost, note: "Studios, Islands of Adventure, Epic" },
+  ];
+  if (hotel) smartLines.push({ k: "One night, Loews Royal Pacific", v: hotel, note: "free Express Unlimited, both days" });
 
   const insights = [];
-  let disney = null;
-  let universal = null;
-  let total = 0;
-
-  if (L.disneyDays > 0) {
-    const effDays = long ? 14 : L.disneyDays;
-    const b = pick(TCONFIG.disney.bands, effDays);
-    const pp = { adult: b.adult, child: b.child };
-    const addons = [];
-    const hopperBundled = long;
-    if (hopperBundled) addons.push("Park Hopper (bundled)");
-    else if (L.hopper) { pp.adult += TCONFIG.disney.hopperAddon; pp.child += TCONFIG.disney.hopperAddon; addons.push("Park Hopper"); }
-    if (L.disneyWater) { pp.adult += TCONFIG.disney.waterPark; pp.child += TCONFIG.disney.waterPark; addons.push("Water parks"); }
-    const cost = pp.adult * adultEq + pp.child * childEq;
-    total += cost;
-    disney = { title: long ? "Disney 14-day ticket" : `Disney ${L.disneyDays}-day ticket`, addons, cost, ppAdult: pp.adult, ppChild: pp.child, need: L.disneyDays };
-  }
-
-  if (L.universalDays > 0) {
-    const effDays = long ? 14 : L.universalDays;
-    const bands = L.epic ? TCONFIG.universal.bands3 : TCONFIG.universal.bands2;
-    const b = pick(bands, effDays);
-    const pp = { adult: b.adult, child: b.child };
-    const addons = [L.epic ? "3 parks incl Epic Universe" : "2 parks"];
-    const p2pBundled = long;
-    if (L.p2p && p2pBundled) addons.push("Park-to-Park (bundled)");
-    else if (L.p2p) { pp.adult += TCONFIG.universal.p2pAddon; pp.child += TCONFIG.universal.p2pAddon; addons.push("Park-to-Park"); }
-    if (L.uniWater) { pp.adult += TCONFIG.universal.volcanoBay; pp.child += TCONFIG.universal.volcanoBay; addons.push("Volcano Bay"); }
-    const cost = pp.adult * adultEq + pp.child * childEq;
-    total += cost;
-    universal = { title: long ? "Universal 14-day ticket" : `Universal ${L.universalDays}-day ticket`, addons, cost, ppAdult: pp.adult, ppChild: pp.child, need: L.universalDays };
-  }
-
-  const gateTotal = total * TCONFIG.gateMarkup;
-  const saving = gateTotal - total;
-
-  if (long && (disney || universal))
-    insights.push({ tone: "good", text: "Your trip is long enough that 14-day tickets cost barely more than shorter ones — buy them for unlimited park days and the freedom to rest whenever you like." });
+  if (L.expressHack)
+    insights.push({ tone: "good", text: `That single ${gbp(hotel)} night unlocks around ${gbp(expressValue)} of Universal Express — free skip-the-line for all ${heads} of you across the check-in and check-out days. Arrive ~7am, leave bags with the concierge, and you're skipping queues by opening.` });
+  if (L.disneyDiscount)
+    insights.push({ tone: "note", text: "Disney's running a 20% base-ticket discount right now, direct and via UK sellers. Discounts come and go — grab it while it's live." });
+  insights.push({ tone: "note", text: "UK travel has been softer this year (the World Cup may be pulling spend), so demand-driven discounts are out in the open. A good moment to book." });
   if (L.kids10plus > 0)
-    insights.push({ tone: "warn", text: `In Orlando a "child" ticket is ages 3–9, so your ${L.kids10plus} child${L.kids10plus > 1 ? "ren" : ""} aged 10+ pay full adult prices. It catches a lot of UK families out.` });
-  if (disney && long)
-    insights.push({ tone: "good", text: "UK 14-day Disney tickets usually bundle Park Hopper and Memory Maker photos — a big part of why they're such good value." });
-  if (disney && !long && L.hopper)
-    insights.push({ tone: "note", text: "Park Hopper earns its place if you like drifting between parks on a whim. First-timers on a tight schedule often don't use it — skip it and save if your days are already mapped out." });
-  if (universal && L.universalDays >= 2 && L.p2p)
-    insights.push({ tone: "note", text: "Park-to-Park is what lets you ride the Hogwarts Express between the two Universal parks. If that ride matters to your family, you need it." });
-  if (L.epic)
-    insights.push({ tone: "note", text: "Epic Universe is Universal's big new park and demand is high — plan it early in the day and expect bigger crowds than the older parks." });
-  if (disney && L.disneyDays > profile.nights - 1)
-    insights.push({ tone: "warn", text: "You've set more Disney days than you have nights — leave room for travel, rest and Universal." });
+    insights.push({ tone: "warn", text: `In Orlando a "child" ticket is ages 3–9, so your ${L.kids10plus} aged 10+ pay adult prices. Catches a lot of UK families out.` });
 
-  return { disney, universal, total, gateTotal, saving, heads, adultEq, childEq, long, insights };
+  return {
+    adultEq, childEq, heads,
+    smartTotal, alt14, saving, expressValue, hotel,
+    smartLines, insights,
+    sources: TCONFIG.bookingSources,
+  };
 }
