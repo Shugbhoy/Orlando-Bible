@@ -52,10 +52,10 @@ export const CATEGORIES = [
     tips: [
       {
         id: "express-overnight",
-        title: "One night at a Premier hotel = two days of free Express",
-        text: "Book a single night at Royal Pacific, Hard Rock or Portofino and get there early. Free Universal Express Unlimited covers everyone in the room from check-in day through check-out day — so an early arrival buys two full park days of unlimited skip-the-line off one overnight. Often cheaper than buying Express for a family of four, and it saves hours.",
-        money: 500, timeHours: 8, affiliate: "Booking.com",
-        caveat: "Express doesn't cover Volcano Bay or Epic Universe, and a few headliners (Hagrid's, VelociCoaster) are excluded.",
+        title: "One £400 night = ~£1,400 of free Express",
+        text: "Book a single night at Loews Royal Pacific (around £400 for a family of four) and get there for 7am, bags with the concierge. Free Universal Express Unlimited then covers everyone in the room across check-in AND check-out days — two full park days of skip-the-line, worth roughly £180pp/day. Compare the night on Booking.com, Trivago, loveholidays and Universal direct, and confirm Express is included before you pay.",
+        money: 1000, timeHours: 12, affiliate: "Booking.com",
+        caveat: "Express doesn't cover Volcano Bay or Epic Universe, and a few headliners (Hagrid's, VelociCoaster) are excluded. The perk is tied to the qualifying on-site room, so verify on any third-party rate.",
         defaultOn: true,
       },
     ],
