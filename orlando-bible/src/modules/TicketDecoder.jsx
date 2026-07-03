@@ -3,35 +3,26 @@ import { C, FONT } from "../theme";
 import Header from "../components/Header";
 import { Card, Row, Stepper, Seg, Toggle } from "../components/controls";
 import { useTripProfile } from "../context/TripProfile";
-import { computeTickets, recommendDays, gbp } from "../lib/tickets";
+import { computeTickets, gbp } from "../lib/tickets";
 
 export default function TicketDecoder() {
   const { profile, update } = useTripProfile();
-  const rec = recommendDays(profile);
-
-  const [disneyDays, setDisneyDays] = useState(rec.disney);
-  const [universalDays, setUniversalDays] = useState(rec.universal);
+  const [disneyDays, setDisneyDays] = useState(4);
+  const [universalDays, setUniversalDays] = useState(3);
   const [kids10plus, setKids10plus] = useState(0);
-  const [hopper, setHopper] = useState(false);
-  const [p2p, setP2p] = useState(true);
-  const [epic, setEpic] = useState(true);
-  const [disneyWater, setDisneyWater] = useState(false);
-  const [uniWater, setUniWater] = useState(false);
+  const [disneyDiscount, setDisneyDiscount] = useState(true);
+  const [expressHack, setExpressHack] = useState(true);
 
-  const L = { disneyDays, universalDays, kids10plus, hopper, p2p, epic, disneyWater, uniWater };
-  const r = useMemo(() => computeTickets(profile, L), [profile, disneyDays, universalDays, kids10plus, hopper, p2p, epic, disneyWater, uniWater]);
-
-  const suggested = recommendDays(profile);
-  const matchesSuggestion = disneyDays === suggested.disney && universalDays === suggested.universal;
-  const applySuggested = () => { setDisneyDays(suggested.disney); setUniversalDays(suggested.universal); };
+  const L = { disneyDays, universalDays, kids10plus, disneyDiscount, expressHack };
+  const r = useMemo(() => computeTickets(profile, L), [profile, disneyDays, universalDays, kids10plus, disneyDiscount, expressHack]);
 
   const toneColor = { good: C.teal, warn: C.coral, note: C.amber };
 
   return (
     <>
       <Header
-        title="Tickets, decoded."
-        subtitle="The most confusing — and most overspent — decision of the lot. Here's what you actually need, and what to skip."
+        title="The smart ticket play."
+        subtitle="Most families over-buy. Here's the combo that beats two 14-day tickets on price — and still skips the queues."
       />
       <main style={S.main}>
         <Card label="Who's going" step="01">
@@ -41,98 +32,77 @@ export default function TicketDecoder() {
           </Row>
           <Row>
             <Stepper label="Children 4–12" value={profile.children} onChange={(v) => update("children", v)} />
-            <Stepper label="Nights" min={3} max={28} value={profile.nights} onChange={(v) => update("nights", v)} />
+            <Stepper label="Of those, aged 10+" hint="pay adult prices" min={0} max={profile.children} value={Math.min(kids10plus, profile.children)} onChange={setKids10plus} />
           </Row>
-          <Stepper
-            label="Of those children, how many are 10+?"
-            hint="they pay adult ticket prices"
-            min={0}
-            max={profile.children}
-            value={Math.min(kids10plus, profile.children)}
-            onChange={setKids10plus}
-            wide
-          />
         </Card>
 
-        <Card label="Where you'll spend your days" step="02">
-          <Seg label="Park focus" value={profile.focus} onChange={(v) => update("focus", v)}
-            opts={[["both", "Both", "Disney + Universal"], ["disney", "Disney-led", ""], ["universal", "Universal-led", ""]]} />
-          <Row>
-            <Stepper label="Disney days" min={0} max={14} value={disneyDays} onChange={setDisneyDays} />
-            <Stepper label="Universal days" min={0} max={14} value={universalDays} onChange={setUniversalDays} />
-          </Row>
-          {!matchesSuggestion && (
-            <button style={S.suggest} onClick={applySuggested}>
-              Suggested for your trip: {suggested.disney} Disney / {suggested.universal} Universal — use this
-            </button>
-          )}
+        <Card label="Days in the parks" step="02">
+          <Seg label="Disney base days" value={String(disneyDays)} onChange={(v) => setDisneyDays(Number(v))}
+            opts={[["3", "3", ""], ["4", "4", "sweet spot"], ["5", "5", ""], ["7", "7", ""]]} />
+          <Seg label="Universal 3-park days" value={String(universalDays)} onChange={(v) => setUniversalDays(Number(v))}
+            opts={[["2", "2", ""], ["3", "3", "recommended"]]} />
+          <div style={{ height: 4 }} />
+          <Toggle label="Apply Disney's live 20% discount?" hint="on right now, direct & UK sellers" on={disneyDiscount} onChange={setDisneyDiscount} />
+          <div style={{ height: 8 }} />
+          <Toggle label="Use the one-night Royal Pacific Express hack?" hint="free skip-the-line, both days" on={expressHack} onChange={setExpressHack} />
         </Card>
 
-        <Card label="Add-ons worth deciding on" step="03">
-          {disneyDays > 0 && (
-            <Toggle label="Hop between Disney parks in a day?" hint="Park Hopper" on={hopper} onChange={setHopper} />
-          )}
-          {universalDays > 0 && (
-            <>
-              <div style={{ height: 8 }} />
-              <Toggle label="Ride the Hogwarts Express / both Universal parks?" hint="Park-to-Park" on={p2p} onChange={setP2p} />
-              <div style={{ height: 8 }} />
-              <Toggle label="Include Epic Universe (the new park)?" hint="adds a third Universal park" on={epic} onChange={setEpic} />
-            </>
-          )}
-          {(disneyDays > 0 || universalDays > 0) && (
-            <>
-              <div style={{ height: 8 }} />
-              {disneyDays > 0 && <Toggle label="Add Disney water parks?" on={disneyWater} onChange={setDisneyWater} />}
-              {universalDays > 0 && (<><div style={{ height: 8 }} /><Toggle label="Add Volcano Bay water park?" on={uniWater} onChange={setUniWater} /></>)}
-            </>
-          )}
-        </Card>
-
-        {/* Total */}
-        <section style={S.totalCard}>
-          <div style={S.totalGlow} aria-hidden="true" />
-          <div style={S.totalEyebrow}>Estimated ticket spend · party of {r.heads}</div>
-          <div style={S.totalBig}>{gbp(r.total)}</div>
-          <div style={S.totalPer}>
-            {r.adultEq} at adult price · {r.childEq} at child price
+        {/* Smart Combo vs 14-day */}
+        <section style={S.compareCard}>
+          <div style={S.glow} aria-hidden="true" />
+          <div style={S.eyebrow}>The Smart Combo · party of {r.heads}</div>
+          <div style={S.smartBig}>{gbp(r.smartTotal)}</div>
+          <div style={S.vsRow}>
+            <span style={S.vsLabel}>Two 14-day tickets would be</span>
+            <span style={S.vsValue}>{gbp(r.alt14)}</span>
           </div>
+          {r.saving > 0 && <div style={S.savedChip}>You save {gbp(r.saving)}</div>}
         </section>
 
-        {/* Ticket plan cards */}
-        <div style={S.planWrap}>
-          {r.disney && <TicketCard resort="Disney" data={r.disney} accent={C.teal} childEq={r.childEq} />}
-          {r.universal && <TicketCard resort="Universal" data={r.universal} accent={C.amber} childEq={r.childEq} />}
-          {!r.disney && !r.universal && (
-            <div style={S.empty}>Set at least one Disney or Universal day above to see your ticket plan.</div>
-          )}
-        </div>
-
-        {/* Where to buy */}
-        {r.total > 0 && (
-          <section style={S.buyCard}>
-            <div style={S.buyHead}>
-              <SparkIcon />
-              <span>Buy through a UK reseller, not at the gate</span>
-            </div>
-            <div style={S.buyBody}>
-              <div style={S.buyRow}><span>At the gate (approx)</span><strong>{gbp(r.gateTotal)}</strong></div>
-              <div style={S.buyRow}><span>UK reseller (approx)</span><strong>{gbp(r.total)}</strong></div>
-              <div style={{ ...S.buyRow, borderBottom: "none" }}>
-                <span style={{ color: C.teal, fontWeight: 700 }}>You'd save roughly</span>
-                <strong style={{ color: C.teal }}>{gbp(r.saving)}</strong>
+        {/* Breakdown */}
+        <Card label="What you're buying" step="03">
+          {r.smartLines.map((l) => (
+            <div key={l.k} style={S.bdLine}>
+              <div>
+                <div style={S.bdKey}>{l.k}</div>
+                <div style={S.bdNote}>{l.note}</div>
               </div>
-              <p style={S.buyNote}>
-                UK resellers are typically cheaper than gate prices for 14-day tickets and let you
-                spread the cost. Never pay at the turnstile — it's the most expensive way to buy.
+              <div style={S.bdVal}>{gbp(l.v)}</div>
+            </div>
+          ))}
+        </Card>
+
+        {/* Express value callout */}
+        {expressHack && (
+          <section style={S.expressCard}>
+            <div style={S.expressHead}><Bolt />Why the hotel night is the masterstroke</div>
+            <div style={S.expressBody}>
+              <div style={S.expressBig}>{gbp(r.hotel)} → {gbp(r.expressValue)}</div>
+              <p style={S.expressNote}>
+                One night at Loews Royal Pacific gives every guest in the room free Universal Express
+                Unlimited across check-in and check-out days. That {gbp(r.hotel)} unlocks about {gbp(r.expressValue)} of
+                skip-the-line — often less than buying Express outright, and it saves hours.
               </p>
             </div>
           </section>
         )}
 
+        {/* Booking sources */}
+        {expressHack && (
+          <Card label="Where to book that one night" step="04">
+            <div style={S.sourceWrap}>
+              {r.sources.map((s) => <span key={s} style={S.source}>{s}</span>)}
+            </div>
+            <p style={S.sourceNote}>
+              Price-compare all four, but confirm free Express is included before you pay — the perk is
+              tied to the qualifying on-site room, not every third-party rate.
+            </p>
+          </Card>
+        )}
+
         {/* Insights */}
         {r.insights.length > 0 && (
-          <Card label="Worth knowing" step="04">
+          <Card label="Worth knowing" step="05">
             {r.insights.map((ins, i) => (
               <div key={i} style={S.insight}>
                 <span style={{ ...S.insightBar, background: toneColor[ins.tone] }} />
@@ -144,13 +114,13 @@ export default function TicketDecoder() {
 
         <div style={S.honest}>
           <p style={S.honestP}>
-            <strong style={{ color: C.teal }}>Don't over-buy days.</strong> A 14-day ticket gives
-            unlimited entry — you don't need a ticket "day" for every night. Build in rest and
-            non-park days; nobody does parks for a fortnight straight and enjoys it.
+            <strong style={{ color: C.teal }}>Buy the days you'll use, not 14.</strong> On a fortnight
+            you'll do maybe 4 Disney days and 2–3 at Universal — the rest is pool, rest and Kennedy. The
+            Smart Combo prices exactly that, and the hotel night skips the queues the 14-day buyers pay extra for.
           </p>
           <p style={S.honestP}>
-            <strong style={{ color: C.teal }}>We don't sell tickets.</strong> These figures point you
-            at the cheapest honest route, not whatever earns the biggest commission.
+            <strong style={{ color: C.teal }}>We don't sell tickets.</strong> These figures point you at the
+            cheapest honest route, not the biggest commission.
           </p>
         </div>
 
@@ -160,60 +130,36 @@ export default function TicketDecoder() {
   );
 }
 
-function TicketCard({ resort, data, accent, childEq }) {
-  return (
-    <div style={{ ...S.tcard, borderColor: accent }}>
-      <div style={{ ...S.tcardTop, background: accent }}>{resort}</div>
-      <div style={S.tcardBody}>
-        <div style={S.tcardTitle}>{data.title}</div>
-        <div style={S.tcardAddons}>
-          {data.addons.map((a) => (<span key={a} style={S.tcardChip}>{a}</span>))}
-        </div>
-        <div style={S.tcardPrices}>
-          <span>{gbp(data.ppAdult)} / adult</span>
-          {childEq > 0 && <span>{gbp(data.ppChild)} / child</span>}
-        </div>
-        <div style={S.tcardCost}>{gbp(data.cost)}</div>
-      </div>
-    </div>
-  );
-}
-
-function SparkIcon() {
-  return (
-    <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true">
-      <path d="M12 2l1.8 6.2L20 10l-6.2 1.8L12 18l-1.8-6.2L4 10l6.2-1.8z" fill={C.amber} />
-    </svg>
-  );
+function Bolt() {
+  return <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true" style={{ marginRight: 7 }}><path d="M13 2L4 14h6l-1 8 9-12h-6z" fill={C.amber} /></svg>;
 }
 
 const S = {
   main: { padding: "18px 16px 0" },
 
-  suggest: { width: "100%", marginTop: 4, background: "#FFF8EC", border: `1px solid ${C.amber}`, borderRadius: 11, padding: "9px 12px", fontSize: 12, fontWeight: 600, color: C.navy, cursor: "pointer", lineHeight: 1.4 },
+  compareCard: { position: "relative", background: `linear-gradient(135deg, ${C.navy}, ${C.indigo})`, borderRadius: 20, padding: "22px 20px", color: "#fff", textAlign: "center", overflow: "hidden", marginBottom: 14, boxShadow: "0 8px 28px rgba(13,27,62,0.32)" },
+  glow: { position: "absolute", top: -40, right: -40, width: 160, height: 160, background: `radial-gradient(circle, ${C.amber}55, transparent 70%)`, borderRadius: "50%" },
+  eyebrow: { position: "relative", fontSize: 11.5, letterSpacing: 1, textTransform: "uppercase", color: "rgba(255,255,255,0.72)", marginBottom: 8 },
+  smartBig: { position: "relative", fontFamily: FONT.display, fontSize: 46, fontWeight: 600, lineHeight: 1, color: C.amber, textShadow: "0 2px 18px rgba(244,166,35,0.4)" },
+  vsRow: { position: "relative", display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 14, paddingTop: 12, borderTop: "1px solid rgba(255,255,255,0.15)" },
+  vsLabel: { fontSize: 12.5, color: "rgba(255,255,255,0.7)" },
+  vsValue: { fontFamily: FONT.display, fontSize: 17, fontWeight: 500, color: "rgba(255,255,255,0.55)", textDecoration: "line-through", textDecorationColor: "rgba(255,107,107,0.7)" },
+  savedChip: { position: "relative", display: "inline-block", marginTop: 14, fontSize: 13, fontWeight: 700, color: C.navy, background: C.amber, borderRadius: 8, padding: "6px 13px" },
 
-  totalCard: { position: "relative", background: `linear-gradient(135deg, ${C.navy}, ${C.indigo})`, borderRadius: 20, padding: "22px 20px", color: "#fff", textAlign: "center", overflow: "hidden", marginBottom: 14, boxShadow: "0 8px 28px rgba(13,27,62,0.32)" },
-  totalGlow: { position: "absolute", top: -40, right: -40, width: 160, height: 160, background: `radial-gradient(circle, ${C.amber}55, transparent 70%)`, borderRadius: "50%" },
-  totalEyebrow: { position: "relative", fontSize: 11.5, letterSpacing: 1, textTransform: "uppercase", color: "rgba(255,255,255,0.72)", marginBottom: 8 },
-  totalBig: { position: "relative", fontFamily: FONT.display, fontSize: 46, fontWeight: 600, lineHeight: 1, color: C.amber, textShadow: "0 2px 18px rgba(244,166,35,0.4)" },
-  totalPer: { position: "relative", fontSize: 12.5, color: "rgba(255,255,255,0.82)", marginTop: 9 },
+  bdLine: { display: "flex", justifyContent: "space-between", alignItems: "center", padding: "11px 0", borderBottom: `1px solid ${C.line}` },
+  bdKey: { fontSize: 14, fontWeight: 600, color: C.navy },
+  bdNote: { fontSize: 11.5, color: "#8a92a6", marginTop: 2 },
+  bdVal: { fontFamily: FONT.display, fontSize: 16, fontWeight: 600, color: C.teal },
 
-  planWrap: { display: "flex", gap: 10, marginBottom: 14 },
-  empty: { flex: 1, background: "#fff", borderRadius: 16, padding: 18, border: `1px dashed ${C.line}`, fontSize: 13, color: "#8a92a6", textAlign: "center", lineHeight: 1.5 },
-  tcard: { flex: 1, background: "#fff", borderRadius: 16, border: "1.5px solid", overflow: "hidden", boxShadow: "0 2px 14px rgba(13,27,62,0.06)" },
-  tcardTop: { color: "#fff", fontFamily: FONT.display, fontSize: 14, fontWeight: 600, padding: "8px 14px" },
-  tcardBody: { padding: 14 },
-  tcardTitle: { fontFamily: FONT.display, fontSize: 14.5, fontWeight: 600, color: C.navy, marginBottom: 9 },
-  tcardAddons: { display: "flex", flexWrap: "wrap", gap: 5, marginBottom: 11 },
-  tcardChip: { fontSize: 10.5, fontWeight: 600, color: "#46506b", background: C.cream, border: `1px solid ${C.line}`, borderRadius: 7, padding: "3px 7px" },
-  tcardPrices: { display: "flex", flexDirection: "column", gap: 2, fontSize: 11.5, color: "#6b7591", marginBottom: 8 },
-  tcardCost: { fontFamily: FONT.display, fontSize: 22, fontWeight: 600, color: C.teal },
+  expressCard: { background: "#fff", border: `1.5px solid ${C.amber}`, borderRadius: 18, marginBottom: 14, overflow: "hidden", boxShadow: "0 2px 14px rgba(244,166,35,0.16)" },
+  expressHead: { display: "flex", alignItems: "center", padding: "13px 16px", background: "linear-gradient(90deg, #FFF8EC, #FFF0EC)", fontFamily: FONT.display, fontWeight: 600, fontSize: 14.5, color: C.navy },
+  expressBody: { padding: "14px 16px 16px" },
+  expressBig: { fontFamily: FONT.display, fontSize: 26, fontWeight: 600, color: C.teal, marginBottom: 8 },
+  expressNote: { fontSize: 12.5, color: "#3a4360", lineHeight: 1.55, margin: 0 },
 
-  buyCard: { background: "#fff", border: `1.5px solid ${C.amber}`, borderRadius: 18, marginBottom: 14, overflow: "hidden", boxShadow: "0 2px 14px rgba(244,166,35,0.16)" },
-  buyHead: { display: "flex", alignItems: "center", gap: 8, padding: "13px 16px", background: "linear-gradient(90deg, #FFF8EC, #FFF0EC)", fontFamily: FONT.display, fontWeight: 600, fontSize: 14.5, color: C.navy },
-  buyBody: { padding: "12px 16px 16px" },
-  buyRow: { display: "flex", justifyContent: "space-between", fontSize: 13.5, padding: "7px 0", borderBottom: `1px dashed ${C.line}`, color: "#3a4360" },
-  buyNote: { fontSize: 12, color: "#6b7591", lineHeight: 1.5, marginTop: 11, marginBottom: 0 },
+  sourceWrap: { display: "flex", flexWrap: "wrap", gap: 7, marginBottom: 10 },
+  source: { fontSize: 12, fontWeight: 600, color: C.navy, background: C.cream, border: `1px solid ${C.line}`, borderRadius: 8, padding: "6px 11px" },
+  sourceNote: { fontSize: 12, color: "#6b7591", lineHeight: 1.5, margin: 0 },
 
   insight: { display: "flex", alignItems: "stretch", gap: 11, padding: "9px 0", borderBottom: `1px solid ${C.line}` },
   insightBar: { width: 4, borderRadius: 3, flexShrink: 0 },
