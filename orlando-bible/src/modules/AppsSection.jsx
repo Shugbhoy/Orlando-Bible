@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { C, FONT } from "../theme";
 import { APP_TIERS } from "../lib/apps";
 
-const TIER_COLOR = { Essential: C.coral, Recommended: C.teal, Bonus: C.amber };
+const TIER_COLOR = { Essential: C.coral, Recommended: C.teal, Bonus: C.amber, "Once you land": C.navy };
 
 export default function AppsSection() {
   const [open, setOpen] = useState(false);
