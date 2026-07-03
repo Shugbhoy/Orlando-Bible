@@ -3,6 +3,7 @@ import { C, FONT } from "../theme";
 import Header from "../components/Header";
 import { useTripProfile } from "../context/TripProfile";
 import { CATEGORIES, tally, gbp } from "../lib/deals";
+import AppsSection from "./AppsSection";
 
 export default function DealsTips() {
   const { dealsApplied: applied, toggleDeal: toggle } = useTripProfile();
@@ -26,6 +27,8 @@ export default function DealsTips() {
           </div>
           <div style={S.heroNote}>Tap a tip to add or remove it. Not every saving stacks — these are honest, indicative figures.</div>
         </section>
+
+        <AppsSection />
 
         {CATEGORIES.map((cat) => (
           <div key={cat.id} style={S.cat}>
