@@ -32,7 +32,7 @@ export default function AppsSection() {
                   <div style={S.appMain}>
                     {app.url ? (
                       <a href={app.url} target="_blank" rel="noopener noreferrer" style={S.appName}>
-                        {app.name} <span style={S.ext}>↗</span>
+                        {app.name} <span style={S.ext}>{app.store ? "· find in app store ↗" : "↗"}</span>
                       </a>
                     ) : (
                       <span style={S.appNamePlain}>{app.name}</span>
