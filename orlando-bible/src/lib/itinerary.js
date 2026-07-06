@@ -76,18 +76,37 @@ const ROTATION = {
 const VALUE_DINNERS = ["Out-of-park value — Kids Eat Free Card", "Villa BBQ with the Walmart shop", "Cici's all-you-can-eat pizza"];
 const THEMED_DISNEY = ["T-Rex Cafe (Disney Springs)", "Cinderella's Royal Table — character meal", "Chef Mickey's — character buffet"];
 const THEMED_NEUTRAL = ["Bahama Breeze", "a Florida steakhouse", "T-Rex Cafe (Disney Springs)"];
+const THEMED_UNIVERSAL = ["Toothsome Chocolate Emporium, CityWalk", "Hard Rock Cafe, CityWalk"];
 
-function breakfastFor(type, accom) {
-  if (type === "rest") return "Big breakfast out — the value meal of the day";
-  if (accom === "hotel") return "Hotel breakfast (free if your hotel includes it)";
-  if (accom === "onsite") return "Resort breakfast — or a booked character meal";
-  return "Self-catered at the villa — eat before you leave for rope drop";
+// Per-person GBP, indicative — sums to roughly the flagship costed fortnight
+// at a family of four. Multiplied by the party's actual headcount.
+const MEAL_COST = {
+  quickService: 9,
+  wieners: 1.25,
+  publix: 6.25,
+  kennedy: 8.75,
+  travelBite: 5,
+  valueDinner: 7.5,
+  lightDinner: 3.75,
+  themedDisney: 27.5,
+  themedNeutral: 25,
+  themedUniversal: 27.5,
+  characterMeal: 35,
+  farewell: 10,
+  roundupRodeo: 32.5,
+};
+
+function breakfastFor(accom) {
+  if (accom === "hotel") return { text: "Hotel breakfast (free if your hotel includes it)", cost: 0 };
+  if (accom === "onsite") return { text: "Resort breakfast — or a booked character meal", cost: 9 };
+  return { text: "Self-catered at the villa — eat before you leave for rope drop", cost: 3 };
 }
 
 export function buildItinerary(profile, plan) {
   const nights = profile.nights;
   const accom = plan?.accom || "villa";
   const rotation = ROTATION[profile.focus] || ROTATION.both;
+  const heads = (profile.adults || 0) + (profile.teens || 0) + (profile.children || 0) + (profile.infants || 0) || 4;
 
   const days = [];
   const bookings = [];
@@ -96,7 +115,11 @@ export function buildItinerary(profile, plan) {
   let dinnerThemed = false; // alternate, starting value
   let themedDisneyIdx = 0;
   let themedNeutralIdx = 0;
+  let themedUniversalIdx = 0;
   let valueIdx = 0;
+  let tripTotal = 0;
+
+  const bfast = breakfastFor(accom); // same breakfast situation every day, regardless of day type
 
   const activeCount = Math.max(0, nights - 1); // days 2..nights
   const excursionAt = nights >= 8 ? Math.floor(activeCount * 0.5) : -1;
@@ -109,29 +132,39 @@ export function buildItinerary(profile, plan) {
     if (!themed) {
       const t = VALUE_DINNERS[valueIdx % VALUE_DINNERS.length];
       valueIdx++;
-      return { text: t, kind: "value" };
+      return { text: t, kind: "value", cost: MEAL_COST.valueDinner };
     }
     // themed
     if (park && PARKS[park]?.resort === "Universal") {
-      return { text: "Hard Rock Cafe at CityWalk", kind: "themed" };
+      const t = THEMED_UNIVERSAL[themedUniversalIdx % THEMED_UNIVERSAL.length];
+      themedUniversalIdx++;
+      return { text: t, kind: "themed", cost: MEAL_COST.themedUniversal };
     }
     if (park && PARKS[park]?.resort === "Disney") {
       const t = THEMED_DISNEY[themedDisneyIdx % THEMED_DISNEY.length];
+      const isCharacter = t.toLowerCase().includes("character");
       themedDisneyIdx++;
       bookings.push({ day: null, text: t });
-      return { text: t, kind: "themed", booking: true };
+      return { text: t, kind: "themed", booking: true, cost: isCharacter ? MEAL_COST.characterMeal : MEAL_COST.themedDisney };
     }
     const t = THEMED_NEUTRAL[themedNeutralIdx % THEMED_NEUTRAL.length];
     themedNeutralIdx++;
-    return { text: t, kind: "themed" };
+    return { text: t, kind: "themed", cost: MEAL_COST.themedNeutral };
   };
 
   // Day 1 — arrival
-  days.push({
-    day: 1, type: "arrival", title: "Arrive & settle in",
-    meals: { breakfast: "—", lunch: "On the road / at the airport", dinner: "Easy first night — a nearby diner or self-cater" },
-    tips: ["Collect the hire car, then straight to Walmart: groceries, sun cream, drinks and a cheap stroller", "Freeze water bottles tonight for tomorrow's park day"],
-  });
+  {
+    const lunchC = MEAL_COST.travelBite, dinnerC = MEAL_COST.valueDinner;
+    const dayCost = lunchC + dinnerC;
+    tripTotal += dayCost;
+    days.push({
+      day: 1, type: "arrival", title: "Arrive & settle in",
+      meals: { breakfast: "—", lunch: "On the road / at the airport", dinner: "Easy first night — a nearby diner or self-cater" },
+      mealCosts: { breakfast: 0, lunch: lunchC * heads, dinner: dinnerC * heads },
+      dayCost: dayCost * heads,
+      tips: ["Collect the hire car, then straight to Walmart: groceries, sun cream, drinks and a cheap stroller", "Freeze water bottles tonight for tomorrow's park day"],
+    });
+  }
 
   for (let i = 0; i < activeCount; i++) {
     const dayNum = i + 2;
@@ -146,9 +179,14 @@ export function buildItinerary(profile, plan) {
     if (type === "rest") {
       consec = 0;
       const d = nextDinner("rest", null);
+      const lunchC = MEAL_COST.wieners;
+      const dayCost = bfast.cost + lunchC + d.cost;
+      tripTotal += dayCost;
       days.push({
         day: dayNum, type: "rest", title: "Pool & rest day",
-        meals: { breakfast: breakfastFor("rest", accom), lunch: "Walmart wieners — 1 min in the microwave, bun & sauce, pennies a head", dinner: d.text },
+        meals: { breakfast: bfast.text, lunch: "Walmart wieners — 1 min in the microwave, bun & sauce, pennies a head", dinner: d.text },
+        mealCosts: { breakfast: bfast.cost * heads, lunch: lunchC * heads, dinner: d.cost * heads },
+        dayCost: dayCost * heads,
         dinnerKind: d.kind, booking: d.booking,
         tips: ["The reset that stops everyone burning out by day six", "Restless? Outlet shopping or a wander round Disney Springs"],
       });
@@ -157,9 +195,14 @@ export function buildItinerary(profile, plan) {
     if (type === "excursion") {
       consec = 0;
       const d = nextDinner("excursion", null);
+      const lunchC = MEAL_COST.kennedy;
+      const dayCost = bfast.cost + lunchC + d.cost;
+      tripTotal += dayCost;
       days.push({
         day: dayNum, type: "excursion", title: "Kennedy Space Center / beach day",
-        meals: { breakfast: breakfastFor("park", accom), lunch: "Picnic or a local bite", dinner: d.text },
+        meals: { breakfast: bfast.text, lunch: "Picnic or a local bite", dinner: d.text },
+        mealCosts: { breakfast: bfast.cost * heads, lunch: lunchC * heads, dinner: d.cost * heads },
+        dayCost: dayCost * heads,
         dinnerKind: d.kind, booking: d.booking,
         tips: ["A day out of the parks — Kennedy Space Center, or Clearwater / Cocoa beach", "Check drive times and pack plenty of water"],
       });
@@ -177,29 +220,42 @@ export function buildItinerary(profile, plan) {
     if (parkKey === "mk" && dayNum === 2) tips.push("First park, first magic — rope drop the headliner before the crowds land (jet lag has you up early anyway)");
     else tips.push(`Rope drop ${park.ropeDrop}`);
     if (park.show && park.show.includes("parade")) tips.push("Parade time is the best time to ride — while everyone lines the route, the headliner queues empty");
-    if (park.hack) tips.push("Express hotel hack day — free Universal Express if you booked the one-night Premier stay across today");
+    if (park.hack) tips.push("Express hotel hack day — check in at Loews Royal Pacific ~7am, bags with the concierge, free Universal Express Unlimited in hand by opening (covers today and tomorrow to park close)");
     if (park.note) tips.push(park.note);
 
     let lunch = "In-park quick-service — mobile-order ahead to skip the queue";
-    if (park.themedLunch) lunch = `Themed lunch: ${park.themedLunch}`;
+    let lunchC = MEAL_COST.quickService;
+    if (park.themedLunch) { lunch = `Themed lunch: ${park.themedLunch}`; lunchC = MEAL_COST.roundupRodeo; }
 
     if (d.booking) bookings[bookings.length - 1].day = dayNum;
+
+    const dayCost = bfast.cost + lunchC + d.cost;
+    tripTotal += dayCost;
 
     days.push({
       day: dayNum, type: "park", parkKey, title: park.name, resort: park.resort,
       ropeDrop: park.ropeDrop, rides: park.rides, characters: park.characters, show: park.show,
-      meals: { breakfast: breakfastFor("park", accom), lunch, dinner: d.text },
+      meals: { breakfast: bfast.text, lunch, dinner: d.text },
+      mealCosts: { breakfast: bfast.cost * heads, lunch: lunchC * heads, dinner: d.cost * heads },
+      dayCost: dayCost * heads,
       dinnerKind: d.kind, booking: d.booking, light: park.light,
       tips,
     });
   }
 
   // Departure
-  days.push({
-    day: nights + 1, type: "departure", title: "Fly home",
-    meals: { breakfast: "Use up the last of the groceries", lunch: "Light bite / on the road", dinner: "—" },
-    tips: ["Late checkout if you can; pack the night before", "Return the hire car with a full tank to avoid the refuel fee"],
-  });
+  {
+    const lunchC = MEAL_COST.travelBite;
+    const dayCost = bfast.cost + lunchC;
+    tripTotal += dayCost;
+    days.push({
+      day: nights + 1, type: "departure", title: "Fly home",
+      meals: { breakfast: "Use up the last of the groceries", lunch: "Light bite / on the road", dinner: "—" },
+      mealCosts: { breakfast: 0, lunch: lunchC * heads, dinner: 0 },
+      dayCost: dayCost * heads,
+      tips: ["Late checkout if you can; pack the night before", "Return the hire car with a full tank to avoid the refuel fee"],
+    });
+  }
 
-  return { days, bookings: bookings.filter((b) => b.day) };
+  return { days, bookings: bookings.filter((b) => b.day), foodTotal: tripTotal * heads, heads };
 }
