@@ -5,25 +5,33 @@
 
 export const CONFIG = {
   fx: 1.27, // USD per GBP — used for the honesty note
+  // Return fares per person, calibrated to the sale-window playbook from
+  // northern UK airports (child ~75% of adult per the under-12 rule).
+  // Applied with flightTierFactor: lean = best sale catch, lavish = walk-up.
   flights: {
-    offpeak: { adult: 520, child: 440 },
-    shoulder: { adult: 720, child: 620 },
-    peak: { adult: 940, child: 840 },
+    offpeak: { adult: 380, child: 290 },
+    shoulder: { adult: 560, child: 430 },
+    peak: { adult: 800, child: 600 },
   },
+  flightTierFactor: { lean: 0.85, mid: 1.0, lavish: 1.35 },
   infantFlight: 90,
+  // per night, whole party. Villa calibrated to real VRBO rates (a good
+  // 4-bed pool villa near the parks ~£1,400 for 2 weeks in peak August = £100/night).
   accom: {
-    villa: { offpeak: 175, shoulder: 250, peak: 370 },
-    hotel: { offpeak: 130, shoulder: 180, peak: 260 },
+    villa: { offpeak: 70, shoulder: 85, peak: 100 },
+    hotel: { offpeak: 70, shoulder: 80, peak: 100 }, // e.g. Comfort Suites Kissimmee ~£80/night for 4, hot breakfast included
     onsite: { offpeak: 300, shoulder: 430, peak: 610 },
   },
+  // per person; reflects the sensible Smart Combo (Disney base + Universal
+  // short ticket) rather than two pricey 14-day tickets.
   tickets: {
-    both: { short: { adult: 620, child: 595 }, long: { adult: 900, child: 860 } },
-    disney: { short: { adult: 470, child: 450 }, long: { adult: 600, child: 575 } },
-    universal: { short: { adult: 330, child: 315 }, long: { adult: 430, child: 410 } },
+    both: { short: { adult: 620, child: 595 }, long: { adult: 750, child: 725 } },
+    disney: { short: { adult: 395, child: 380 }, long: { adult: 470, child: 450 } },
+    universal: { short: { adult: 355, child: 345 }, long: { adult: 400, child: 385 } },
   },
   food: { adult: 40, child: 28 },
   tip: { adult: 6, child: 2 },
-  carPerWeek: 300,
+  carPerWeek: 250, // shopped on Kayak (searches every provider, usually shows CDW included)
   fuelPerDay: 9,
   tollsPerWeek: 35,
   parkParkingPerDay: 28,
@@ -55,7 +63,7 @@ export function compute(p, tier) {
   const parkDays = Math.max(1, Math.round(nights * 0.6));
 
   const f = CONFIG.flights[p.season];
-  const flights = adultsEq * f.adult + p.children * f.child + p.infants * CONFIG.infantFlight;
+  const flights = (adultsEq * f.adult + p.children * f.child + p.infants * CONFIG.infantFlight) * CONFIG.flightTierFactor[tier];
 
   let perNight = CONFIG.accom[p.accom][p.season];
   if ((p.accom === "hotel" || p.accom === "onsite") && heads > 4) perNight *= 1.8;
@@ -90,10 +98,10 @@ export function compute(p, tier) {
   return {
     total, hidden, heads,
     lines: [
-      { k: "Flights", v: flights, note: `${heads} travelling${p.infants ? ` + ${p.infants} infant` : ""}` },
+      { k: "Flights", v: flights, note: `${heads} travelling${p.infants ? ` + ${p.infants} infant` : ""} · ${tier === "lavish" ? "walk-up fare" : "sale-window fare"}` },
       { k: "Accommodation", v: accom, note: `${nights} nights, ${labelAccom(p.accom)}` },
       { k: "Park tickets", v: tickets, note: `${labelFocus(p.focus)}, ${lengthTier === "long" ? "14-day" : `${nights}-day`}` },
-      { k: "Transport", v: transport, note: p.transport === "car" ? "Hire car, fuel, transfers" : "Airport transfer + rideshares" },
+      { k: "Transport", v: transport, note: p.transport === "car" ? "Hire car (shopped on Kayak), fuel, tolls" : "Airport transfer + rideshares" },
       { k: "Food & drink", v: food, note: "Groceries + eating out" },
       { k: "Souvenirs & shopping", v: extras, note: "Florida shopping is good value" },
       { k: "Skip-the-line passes", v: skipLine, note: skipLine ? `${CONFIG.skipLine[tier]} premium days` : "Not included at this tier" },
