@@ -21,11 +21,15 @@ export default function Plan() {
       />
       <main style={S.main}>
         <TripSummary />
-        <button style={S.hero} onClick={() => nav("/itinerary")}>
-          <div style={S.heroText}>
-            <div style={S.heroEyebrow}>The centrepiece</div>
-            <div style={S.heroTitle}>Your day-by-day plan</div>
-            <div style={S.heroDesc}>14 days sequenced — rides, characters, parades & dining, in the right order.</div>
+        <button style={S.hero} className="hero-glow" onClick={() => nav("/itinerary")}>
+          <div style={S.heroRibbon}>START HERE</div>
+          <div style={S.heroTop}>
+            <div style={S.heroText}>
+              <div style={S.heroEyebrow}>The centrepiece</div>
+              <div style={S.heroTitle}>Your day-by-day plan</div>
+              <div style={S.heroDesc}>14 days sequenced — rides, characters, parades & dining, in the right order.</div>
+            </div>
+            <WavingFlag />
           </div>
           <span style={S.heroArrow}>›</span>
         </button>
@@ -53,6 +57,28 @@ export default function Plan() {
   );
 }
 
+function WavingFlag() {
+  // A small, original waving Stars & Stripes — flags are a national symbol,
+  // not third-party IP, so this is safe to use freely.
+  return (
+    <div style={S.flagWrap}>
+      <div style={S.flagPole} />
+      <div className="flag-wave" style={{ transformOrigin: "left center" }}>
+        <svg width="44" height="30" viewBox="0 0 44 30" aria-hidden="true">
+          <rect width="44" height="30" fill="#fff" />
+          {[0, 1, 2, 3, 4, 5, 6].map((i) => (
+            <rect key={i} y={i * (30 / 13) * 2} width="44" height={30 / 13} fill="#B22234" />
+          ))}
+          <rect width="20" height={30 * 7 / 13} fill="#3C3B6E" />
+          {Array.from({ length: 12 }).map((_, i) => (
+            <circle key={i} cx={3 + (i % 4) * 5} cy={3 + Math.floor(i / 4) * 5.5} r="0.9" fill="#fff" />
+          ))}
+        </svg>
+      </div>
+    </div>
+  );
+}
+
 function ModIcon({ name }) {
   const p = { fill: "none", stroke: C.teal, strokeWidth: 2, strokeLinecap: "round", strokeLinejoin: "round" };
   const shapes = {
@@ -66,12 +92,16 @@ function ModIcon({ name }) {
 
 const S = {
   main: { padding: "18px 16px 0" },
-  hero: { width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 12, background: `linear-gradient(135deg, ${C.teal}, ${C.tealDark})`, border: "none", borderRadius: 18, padding: "16px 18px", marginBottom: 14, cursor: "pointer", boxShadow: "0 6px 20px rgba(26,158,143,0.3)" },
+  hero: { width: "100%", textAlign: "left", position: "relative", background: `linear-gradient(135deg, ${C.teal}, ${C.tealDark})`, border: "none", borderRadius: 20, padding: "20px 20px 22px", marginBottom: 14, cursor: "pointer", overflow: "hidden" },
+  heroRibbon: { position: "absolute", top: 12, right: -30, background: C.amber, color: C.navy, fontSize: 9.5, fontWeight: 700, letterSpacing: 1, padding: "3px 34px", transform: "rotate(35deg)", boxShadow: "0 2px 6px rgba(0,0,0,0.2)" },
+  heroTop: { display: "flex", alignItems: "flex-start", justifyContent: "space-between", gap: 10 },
   heroText: { flex: 1 },
   heroEyebrow: { fontSize: 10.5, fontWeight: 700, textTransform: "uppercase", letterSpacing: 1, color: "rgba(255,255,255,0.8)" },
-  heroTitle: { fontFamily: FONT.display, fontSize: 19, fontWeight: 600, color: "#fff", marginTop: 2 },
-  heroDesc: { fontSize: 12.5, color: "rgba(255,255,255,0.9)", marginTop: 3, lineHeight: 1.4 },
-  heroArrow: { fontSize: 28, color: "#fff", fontWeight: 300 },
+  heroTitle: { fontFamily: FONT.display, fontSize: 21, fontWeight: 600, color: "#fff", marginTop: 2 },
+  heroDesc: { fontSize: 12.5, color: "rgba(255,255,255,0.9)", marginTop: 4, lineHeight: 1.4, maxWidth: 240 },
+  heroArrow: { position: "absolute", bottom: 14, right: 18, fontSize: 26, color: "#fff", fontWeight: 300 },
+  flagWrap: { display: "flex", alignItems: "center", flexShrink: 0, marginTop: 2, marginRight: 6 },
+  flagPole: { width: 3, height: 34, background: "rgba(255,255,255,0.85)", borderRadius: 2, marginRight: -2 },
   intro: { fontSize: 13.5, lineHeight: 1.55, color: "#46506b", margin: "0 4px 16px" },
   card: { width: "100%", textAlign: "left", display: "flex", alignItems: "center", gap: 14, background: "#fff", border: `1px solid ${C.line}`, borderRadius: 18, padding: 16, marginBottom: 12, cursor: "pointer", boxShadow: "0 2px 14px rgba(13,27,62,0.06)" },
   cardIcon: { width: 46, height: 46, borderRadius: 12, background: C.cream, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 },
