@@ -6,11 +6,8 @@ import { useTripProfile } from "../context/TripProfile";
 import { CONFIG, compute, gbp, labelFocus } from "../lib/budget";
 
 export default function BudgetCalculator() {
-  const { profile, update } = useTripProfile();
-  // Module-local inputs (not part of the shared profile)
-  const [accom, setAccom] = useState("villa");
-  const [transport, setTransport] = useState("car");
-  const [tier, setTier] = useState("mid");
+  const { profile, update, plan, updatePlan } = useTripProfile();
+  const { accom, transport, tier } = plan;
   const [showHow, setShowHow] = useState(false);
 
   const p = { ...profile, accom, transport };
@@ -43,11 +40,11 @@ export default function BudgetCalculator() {
         <Card label="When & how" step="02">
           <Seg label="Season" value={profile.season} onChange={(v) => update("season", v)}
             opts={[["offpeak", "Off-peak", "Sept · Jan"], ["shoulder", "Shoulder", "Easter · Oct"], ["peak", "Peak", "Summer · Xmas"]]} />
-          <Seg label="Where you'll stay" value={accom} onChange={setAccom}
+          <Seg label="Where you'll stay" value={accom} onChange={(v) => updatePlan("accom", v)}
             opts={[["villa", "Off-site villa", "Pool · DIY"], ["hotel", "Off-site hotel", "Suite"], ["onsite", "On-site Disney", "Premium"]]} />
           <Seg label="Park focus" value={profile.focus} onChange={(v) => update("focus", v)}
             opts={[["both", "Both", "Disney + Universal"], ["disney", "Disney-led", ""], ["universal", "Universal-led", ""]]} />
-          <Seg label="Getting around" value={transport} onChange={setTransport}
+          <Seg label="Getting around" value={transport} onChange={(v) => updatePlan("transport", v)}
             opts={[["car", "Hire car", "Most flexible"], ["transfers", "Transfers", "No driving"]]} />
         </Card>
 
@@ -55,7 +52,7 @@ export default function BudgetCalculator() {
           <div style={S.tierLabel}>Pick a spend level</div>
           <div style={S.tierRow}>
             {[["lean", "Lean", "Careful"], ["mid", "Mid", "Comfortable"], ["lavish", "Lavish", "Once-in-a-lifetime"]].map(([v, t, d]) => (
-              <button key={v} onClick={() => setTier(v)} style={{ ...S.tierBtn, ...(tier === v ? S.tierBtnOn : {}) }}>
+              <button key={v} onClick={() => updatePlan("tier", v)} style={{ ...S.tierBtn, ...(tier === v ? S.tierBtnOn : {}) }}>
                 <span style={S.tierTop}>{t}</span>
                 <span style={S.tierSub}>{d}</span>
                 <span style={{ ...S.tierTotal, color: tier === v ? C.navy : C.teal }}>{gbp(tiers[v].total)}</span>
