@@ -3,6 +3,7 @@ import { C, FONT } from "../theme";
 import Header from "../components/Header";
 import { useTripProfile } from "../context/TripProfile";
 import { buildItinerary } from "../lib/itinerary";
+import { gbp } from "../lib/budget";
 
 const TYPE = {
   arrival: { label: "Arrive", ramp: "#8a92a6" },
@@ -14,7 +15,7 @@ const TYPE = {
 
 export default function Itinerary() {
   const { profile, plan } = useTripProfile();
-  const { days, bookings } = useMemo(() => buildItinerary(profile, plan), [profile, plan]);
+  const { days, bookings, foodTotal } = useMemo(() => buildItinerary(profile, plan), [profile, plan]);
 
   const parkDays = days.filter((d) => d.type === "park").length;
   const restDays = days.filter((d) => d.type === "rest").length;
@@ -32,6 +33,10 @@ export default function Itinerary() {
             <Stat n={profile.nights} label="nights" />
             <Stat n={parkDays} label="park days" />
             <Stat n={restDays} label="rest days" />
+          </div>
+          <div style={S.foodTotalRow}>
+            <span style={S.foodTotalLabel}>Estimated food, all {days.length} days</span>
+            <span style={S.foodTotalVal}>{gbp(foodTotal)}</span>
           </div>
           <div style={S.summaryNote}>Built from your trip profile. Change party, nights or focus and the plan rebuilds.</div>
         </section>
@@ -109,6 +114,7 @@ function DayCard({ d }) {
           <div style={S.dayType}>
             <span style={{ ...S.typePill, color: t.ramp }}>{t.label}</span>
             {d.dinnerKind && <span style={{ ...S.dinnerTag, ...(d.dinnerKind === "themed" ? S.dinnerThemed : {}) }}>{d.dinnerKind === "themed" ? "themed night" : "value night"}</span>}
+            {d.dayCost > 0 && <span style={S.dayCostTag}>{gbp(d.dayCost)}</span>}
           </div>
         </div>
         <span style={S.dayChev}>{open ? "▲" : "▼"}</span>
@@ -131,9 +137,10 @@ function DayCard({ d }) {
           {isPark && d.light && <Section title="The day">A proper day off the parks — slides, the lazy river and the wave pool. Loungers go early.</Section>}
 
           <Section title="Eating">
-            <div style={S.meal}><span style={S.mealK}>Breakfast</span><span style={S.mealV}>{d.meals.breakfast}</span></div>
-            <div style={S.meal}><span style={S.mealK}>Lunch</span><span style={S.mealV}>{d.meals.lunch}</span></div>
-            <div style={S.meal}><span style={S.mealK}>Dinner</span><span style={S.mealV}>{d.meals.dinner}{d.booking && <span style={S.bookFlag}> · book 60 days out</span>}</span></div>
+            <div style={S.meal}><span style={S.mealK}>Breakfast</span><span style={S.mealV}>{d.meals.breakfast}{d.mealCosts && d.mealCosts.breakfast > 0 && <span style={S.mealCost}> · {gbp(d.mealCosts.breakfast)}</span>}</span></div>
+            <div style={S.meal}><span style={S.mealK}>Lunch</span><span style={S.mealV}>{d.meals.lunch}{d.mealCosts && d.mealCosts.lunch > 0 && <span style={S.mealCost}> · {gbp(d.mealCosts.lunch)}</span>}</span></div>
+            <div style={S.meal}><span style={S.mealK}>Dinner</span><span style={S.mealV}>{d.meals.dinner}{d.booking && <span style={S.bookFlag}> · book 60 days out</span>}{d.mealCosts && d.mealCosts.dinner > 0 && <span style={S.mealCost}> · {gbp(d.mealCosts.dinner)}</span>}</span></div>
+            {d.dayCost > 0 && <div style={S.dayTotalRow}>Whole day, whole party: <strong>{gbp(d.dayCost)}</strong></div>}
           </Section>
 
           <Section title="Tips">
@@ -165,6 +172,9 @@ const S = {
   stat: { textAlign: "center" },
   statN: { fontFamily: FONT.display, fontSize: 30, fontWeight: 600, color: C.amber, lineHeight: 1 },
   statL: { fontSize: 11, color: "rgba(255,255,255,0.72)", marginTop: 4, textTransform: "uppercase", letterSpacing: 0.5 },
+  foodTotalRow: { position: "relative", display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.15)" },
+  foodTotalLabel: { fontSize: 12, color: "rgba(255,255,255,0.75)" },
+  foodTotalVal: { fontFamily: FONT.display, fontSize: 20, fontWeight: 600, color: C.amber },
   summaryNote: { position: "relative", fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 14, textAlign: "center", lineHeight: 1.45 },
 
   essentials: { background: "#fff", borderRadius: 18, padding: 16, border: `1px solid ${C.line}`, boxShadow: "0 2px 14px rgba(13,27,62,0.06)", marginBottom: 14 },
@@ -191,6 +201,7 @@ const S = {
   typePill: { fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: 0.5 },
   dinnerTag: { fontSize: 10.5, fontWeight: 600, color: C.teal, background: "#E2F5F2", borderRadius: 5, padding: "1px 6px" },
   dinnerThemed: { color: "#a06800", background: "#FFF3D6" },
+  dayCostTag: { fontSize: 11, fontWeight: 700, color: C.navy, background: "#FFF3D6", borderRadius: 5, padding: "1px 7px" },
   dayChev: { fontSize: 9, color: "#b3bac9" },
 
   dayBody: { padding: "0 14px 14px", borderTop: `1px solid ${C.line}` },
@@ -204,7 +215,9 @@ const S = {
   meal: { display: "flex", gap: 10, padding: "3px 0" },
   mealK: { fontSize: 11.5, fontWeight: 700, color: "#8a92a6", width: 64, flexShrink: 0, textTransform: "uppercase", letterSpacing: 0.3, paddingTop: 1 },
   mealV: { fontSize: 13, color: "#3a4360", lineHeight: 1.4 },
+  mealCost: { color: C.teal, fontWeight: 700 },
   bookFlag: { color: "#a06800", fontWeight: 600 },
+  dayTotalRow: { fontSize: 12.5, color: "#3a4360", marginTop: 8, paddingTop: 8, borderTop: `1px dashed ${C.line}` },
 
   tip: { display: "flex", gap: 8, fontSize: 12.5, color: "#3a4360", lineHeight: 1.45, marginBottom: 6 },
   tipDot: { width: 6, height: 6, borderRadius: "50%", background: C.amber, marginTop: 6, flexShrink: 0 },
