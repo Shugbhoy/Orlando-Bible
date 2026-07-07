@@ -121,6 +121,8 @@ export function buildItinerary(profile, plan) {
   const accom = plan?.accom || "villa";
   const heads = (profile.adults || 0) + (profile.teens || 0) + (profile.children || 0) + (profile.infants || 0) || 4;
 
+  // Single source of truth, shared with the Ticket Decoder — the two screens
+  // can no longer disagree about how many Disney/Universal days a trip needs.
   const rec = recommendDays(profile);
   const rawRotation = buildRotation(rec.disney, rec.universal);
   const activeCount = Math.max(0, nights - 1); // days 2..nights
@@ -138,10 +140,6 @@ export function buildItinerary(profile, plan) {
   const hasExcursion = nights >= 8 && roomForExcursion;
   const specialTotal = targetParkDays + (hasExcursion ? 1 : 0);
   const restBudget = Math.max(0, activeCount - specialTotal);
-
-  // Where the excursion lands — roughly the midpoint of the park GROUPS
-  // (not raw days), so it breaks up the trip rather than bookending it.
-  const excursionAfterParks = hasExcursion ? Math.ceil(targetParkDays / 2) : -1;
 
   // Chunk the park days into groups of at most 3, guaranteeing the
   // max-3-consecutive rule by construction. The Universal Express pair
@@ -162,7 +160,7 @@ export function buildItinerary(profile, plan) {
   // Insert the excursion as its OWN group at a clean boundary between two
   // park groups, rather than splicing into the middle of a run — splicing
   // mid-run creates awkward leftover singleton groups that waste rest-day
-  // budget on extra gaps (the bug this replaced).
+  // budget on extra gaps (a bug this replaced).
   const groups = [];
   const excursionAtGroup = hasExcursion ? Math.ceil(parkGroups.length / 2) : -1;
   parkGroups.forEach((g, i) => {
@@ -350,7 +348,7 @@ export function buildItinerary(profile, plan) {
     bookings: bookings.filter((b) => b.day),
     foodTotal: tripTotal * heads + excursionTicketTotal,
     heads,
-    recommendedDays: rec, // exposed so the summary card can show "4 Disney + 3 Universal"
-    intensePacing: intense, // true when the trip is too tight to guarantee a gentle rest rhythm
+    recommendedDays: rec,
+    intensePacing: intense,
   };
 }
