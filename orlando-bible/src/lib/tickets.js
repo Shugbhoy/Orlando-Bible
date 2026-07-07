@@ -74,7 +74,9 @@ function clampUniversalDays(n) {
   return n; // 2 or 3
 }
 
-// L = { disneyDays, universalDays, kids10plus, disneyDiscount, expressHack }
+const pick = (bands, days) => bands[days] || bands[4];
+
+// L = { disneyDays, universalDays, kids10plus, disneyDiscount, expressHack, onsite }
 export function computeTickets(profile, L) {
   const adultEq = profile.adults + profile.teens + L.kids10plus; // 10+ pay adult
   const childEq = Math.max(0, profile.children - L.kids10plus); // ages 3–9
@@ -124,7 +126,6 @@ export function computeTickets(profile, L) {
   insights.push({ tone: "note", text: "UK travel has been softer this year (the World Cup may be pulling spend), so demand-driven discounts are out in the open. A good moment to book." });
   if (L.kids10plus > 0)
     insights.push({ tone: "warn", text: `In Orlando a "child" ticket is ages 3–9, so your ${L.kids10plus} aged 10+ pay adult prices. Catches a lot of UK families out.` });
-Use Control + Shift + m to toggle the tab key moving focus. Alternatively, use esc then tab to move to the next interactive element on the page.
 
   return {
     adultEq, childEq, heads,
