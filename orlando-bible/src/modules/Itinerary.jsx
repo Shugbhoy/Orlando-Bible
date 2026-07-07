@@ -15,10 +15,14 @@ const TYPE = {
 
 export default function Itinerary() {
   const { profile, plan } = useTripProfile();
-  const { days, bookings, foodTotal } = useMemo(() => buildItinerary(profile, plan), [profile, plan]);
+  const { days, bookings, foodTotal, recommendedDays, intensePacing } = useMemo(() => buildItinerary(profile, plan), [profile, plan]);
 
   const parkDays = days.filter((d) => d.type === "park").length;
   const restDays = days.filter((d) => d.type === "rest").length;
+  const splitText = [
+    recommendedDays.disney > 0 && `${recommendedDays.disney} Disney`,
+    recommendedDays.universal > 0 && `${recommendedDays.universal} Universal`,
+  ].filter(Boolean).join(" + ");
 
   return (
     <>
@@ -34,12 +38,22 @@ export default function Itinerary() {
             <Stat n={parkDays} label="park days" />
             <Stat n={restDays} label="rest days" />
           </div>
+          <div style={S.splitRow}>{splitText} — matches your Ticket Decoder</div>
           <div style={S.foodTotalRow}>
             <span style={S.foodTotalLabel}>Estimated food, all {days.length} days</span>
             <span style={S.foodTotalVal}>{gbp(foodTotal)}</span>
           </div>
           <div style={S.summaryNote}>Built from your trip profile. Change party, nights or focus and the plan rebuilds.</div>
         </section>
+
+        {intensePacing && (
+          <div style={S.intenseNote}>
+            <strong>This is a genuinely intense trip.</strong> There isn't enough spare time to fit
+            every ticketed day in <em>and</em> keep a gentle rest rhythm — some stretches will run
+            longer than the usual "3 park days then a break." Consider trimming a day or two off the
+            ticket count if that matters more to you than using every admission.
+          </div>
+        )}
 
         {/* Before you go */}
         <div style={S.essentials}>
@@ -175,7 +189,9 @@ const S = {
   foodTotalRow: { position: "relative", display: "flex", justifyContent: "space-between", alignItems: "baseline", marginTop: 16, paddingTop: 14, borderTop: "1px solid rgba(255,255,255,0.15)" },
   foodTotalLabel: { fontSize: 12, color: "rgba(255,255,255,0.75)" },
   foodTotalVal: { fontFamily: FONT.display, fontSize: 20, fontWeight: 600, color: C.amber },
+  splitRow: { position: "relative", fontSize: 11.5, color: "rgba(255,255,255,0.7)", textAlign: "center", marginTop: 10 },
   summaryNote: { position: "relative", fontSize: 11, color: "rgba(255,255,255,0.6)", marginTop: 14, textAlign: "center", lineHeight: 1.45 },
+  intenseNote: { background: "#FFF3D6", border: `1px solid ${C.amber}`, borderRadius: 14, padding: "12px 14px", fontSize: 12.5, lineHeight: 1.55, color: "#7a5a10", marginBottom: 14 },
 
   essentials: { background: "#fff", borderRadius: 18, padding: 16, border: `1px solid ${C.line}`, boxShadow: "0 2px 14px rgba(13,27,62,0.06)", marginBottom: 14 },
   essTitle: { fontFamily: FONT.display, fontSize: 15, fontWeight: 600, color: C.navy, marginBottom: 11 },
