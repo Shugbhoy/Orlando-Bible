@@ -174,6 +174,8 @@ function Bolt() {
 const S = {
   main: { padding: "18px 16px 0" },
 
+  suggest: { width: "100%", marginTop: 4, background: "#FFF8EC", border: `1px solid ${C.amber}`, borderRadius: 11, padding: "9px 12px", fontSize: 12, fontWeight: 600, color: C.navy, cursor: "pointer", lineHeight: 1.4 },
+
   compareCard: { position: "relative", background: `linear-gradient(135deg, ${C.navy}, ${C.indigo})`, borderRadius: 20, padding: "22px 20px", color: "#fff", textAlign: "center", overflow: "hidden", marginBottom: 14, boxShadow: "0 8px 28px rgba(13,27,62,0.32)" },
   glow: { position: "absolute", top: -40, right: -40, width: 160, height: 160, background: `radial-gradient(circle, ${C.amber}55, transparent 70%)`, borderRadius: "50%" },
   eyebrow: { position: "relative", fontSize: 11.5, letterSpacing: 1, textTransform: "uppercase", color: "rgba(255,255,255,0.72)", marginBottom: 8 },
