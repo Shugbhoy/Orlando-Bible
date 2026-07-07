@@ -3,18 +3,32 @@ import { C, FONT } from "../theme";
 import Header from "../components/Header";
 import { Card, Row, Stepper, Seg, Toggle } from "../components/controls";
 import { useTripProfile } from "../context/TripProfile";
-import { computeTickets, gbp } from "../lib/tickets";
+import { computeTickets, recommendDays, gbp } from "../lib/tickets";
 
 export default function TicketDecoder() {
-  const { profile, update } = useTripProfile();
-  const [disneyDays, setDisneyDays] = useState(4);
-  const [universalDays, setUniversalDays] = useState(3);
+  const { profile, update, plan } = useTripProfile();
+  const suggested = useMemo(() => recommendDays(profile), [profile.nights, profile.focus]);
+
+  const [disneyDays, setDisneyDays] = useState(suggested.disney || 4);
+  const [universalDays, setUniversalDays] = useState(suggested.universal || 3);
   const [kids10plus, setKids10plus] = useState(0);
   const [disneyDiscount, setDisneyDiscount] = useState(true);
   const [expressHack, setExpressHack] = useState(true);
 
-  const L = { disneyDays, universalDays, kids10plus, disneyDiscount, expressHack };
-  const r = useMemo(() => computeTickets(profile, L), [profile, disneyDays, universalDays, kids10plus, disneyDiscount, expressHack]);
+  const showDisney = profile.focus !== "universal";
+  const showUniversal = profile.focus !== "disney";
+
+  const L = {
+    disneyDays: showDisney ? disneyDays : 0,
+    universalDays: showUniversal ? universalDays : 0,
+    kids10plus, disneyDiscount: showDisney ? disneyDiscount : false,
+    expressHack: showUniversal ? expressHack : false,
+    onsite: plan?.accom === "onsite",
+  };
+  const r = useMemo(() => computeTickets(profile, L), [profile, disneyDays, universalDays, kids10plus, disneyDiscount, expressHack, plan?.accom, showDisney, showUniversal]);
+
+  const matchesSuggestion = disneyDays === suggested.disney && universalDays === suggested.universal;
+  const applySuggested = () => { setDisneyDays(suggested.disney || 4); setUniversalDays(suggested.universal || 3); };
 
   const toneColor = { good: C.teal, warn: C.coral, note: C.amber };
 
@@ -37,14 +51,23 @@ export default function TicketDecoder() {
         </Card>
 
         <Card label="Days in the parks" step="02">
-          <Seg label="Disney base days" value={String(disneyDays)} onChange={(v) => setDisneyDays(Number(v))}
-            opts={[["3", "3", ""], ["4", "4", "sweet spot"], ["5", "5", ""], ["7", "7", ""]]} />
-          <Seg label="Universal 3-park days" value={String(universalDays)} onChange={(v) => setUniversalDays(Number(v))}
-            opts={[["2", "2", ""], ["3", "3", "recommended"]]} />
+          {showDisney && (
+            <Seg label="Disney days" value={String(disneyDays)} onChange={(v) => setDisneyDays(Number(v))}
+              opts={[["3", "3", ""], ["4", "4", "sweet spot"], ["5", "5", ""], ["7", "7", ""], ["14", "14", "unlimited"]]} />
+          )}
+          {showUniversal && (
+            <Seg label="Universal 3-park days" value={String(universalDays)} onChange={(v) => setUniversalDays(Number(v))}
+              opts={[["2", "2", ""], ["3", "3", "recommended"], ["14", "14", "unlimited"]]} />
+          )}
+          {!matchesSuggestion && (
+            <button style={S.suggest} onClick={applySuggested}>
+              Suggested for your trip: {showDisney && `${suggested.disney} Disney`}{showDisney && showUniversal && " / "}{showUniversal && `${suggested.universal} Universal`} — use this
+            </button>
+          )}
           <div style={{ height: 4 }} />
-          <Toggle label="Apply Disney's live 20% discount?" hint="on right now, direct & UK sellers" on={disneyDiscount} onChange={setDisneyDiscount} />
-          <div style={{ height: 8 }} />
-          <Toggle label="Use the one-night Royal Pacific Express hack?" hint="free skip-the-line, both days" on={expressHack} onChange={setExpressHack} />
+          {showDisney && <Toggle label="Apply Disney's live 20% discount?" hint="on right now, direct & UK sellers" on={disneyDiscount} onChange={setDisneyDiscount} />}
+          {showDisney && <div style={{ height: 8 }} />}
+          {showUniversal && <Toggle label="Use the one-night Royal Pacific Express hack?" hint="free skip-the-line, both days" on={expressHack} onChange={setExpressHack} />}
         </Card>
 
         {/* Smart Combo vs 14-day */}
@@ -53,7 +76,9 @@ export default function TicketDecoder() {
           <div style={S.eyebrow}>The Smart Combo · party of {r.heads}</div>
           <div style={S.smartBig}>{gbp(r.smartTotal)}</div>
           <div style={S.vsRow}>
-            <span style={S.vsLabel}>Two 14-day tickets would be</span>
+            <span style={S.vsLabel}>
+              {profile.focus === "both" ? "Two 14-day tickets would be" : profile.focus === "disney" ? "A Disney 14-day ticket would be" : "A Universal 14-day ticket would be"}
+            </span>
             <span style={S.vsValue}>{gbp(r.alt14)}</span>
           </div>
           {r.saving > 0 && <div style={S.savedChip}>You save {gbp(r.saving)}</div>}
@@ -71,6 +96,18 @@ export default function TicketDecoder() {
             </div>
           ))}
         </Card>
+
+        {/* Where to buy the tickets */}
+        <section style={S.buyCard}>
+          <div style={S.buyHead}>Where to buy your park tickets</div>
+          <div style={S.buyBody}>
+            <div style={S.buyPrimary}>{r.ticketSources.primary}</div>
+            <p style={S.buyNote}>{r.ticketSources.note}</p>
+            <div style={S.buyFallback}>{r.ticketSources.fallback}</div>
+            <p style={S.buyNote}>{r.ticketSources.fallbackNote}</p>
+            <p style={S.buyRule}>Always cross-check two or three, and never buy at the gate — it's the most expensive way in.</p>
+          </div>
+        </section>
 
         {/* Express value callout */}
         {expressHack && (
@@ -150,6 +187,14 @@ const S = {
   bdKey: { fontSize: 14, fontWeight: 600, color: C.navy },
   bdNote: { fontSize: 11.5, color: "#8a92a6", marginTop: 2 },
   bdVal: { fontFamily: FONT.display, fontSize: 16, fontWeight: 600, color: C.teal },
+
+  buyCard: { background: "#fff", border: `1.5px solid ${C.teal}`, borderRadius: 18, marginBottom: 14, overflow: "hidden", boxShadow: "0 2px 14px rgba(26,158,143,0.14)" },
+  buyHead: { padding: "13px 16px", background: "linear-gradient(90deg, #E2F5F2, #EAF7F5)", fontFamily: FONT.display, fontWeight: 600, fontSize: 14.5, color: C.navy },
+  buyBody: { padding: "14px 16px 16px" },
+  buyPrimary: { fontFamily: FONT.display, fontSize: 17, fontWeight: 600, color: C.teal },
+  buyFallback: { fontFamily: FONT.display, fontSize: 14, fontWeight: 600, color: C.navy, marginTop: 12 },
+  buyNote: { fontSize: 12.5, color: "#3a4360", lineHeight: 1.55, margin: "5px 0 0" },
+  buyRule: { fontSize: 12, color: "#6b7591", lineHeight: 1.5, margin: "12px 0 0", fontStyle: "italic" },
 
   expressCard: { background: "#fff", border: `1.5px solid ${C.amber}`, borderRadius: 18, marginBottom: 14, overflow: "hidden", boxShadow: "0 2px 14px rgba(244,166,35,0.16)" },
   expressHead: { display: "flex", alignItems: "center", padding: "13px 16px", background: "linear-gradient(90deg, #FFF8EC, #FFF0EC)", fontFamily: FONT.display, fontWeight: 600, fontSize: 14.5, color: C.navy },
