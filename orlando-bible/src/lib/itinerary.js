@@ -1,10 +1,16 @@
 // The Orlando Bible — itinerary engine.
 // Generates a day-by-day plan from the shared trip profile, encoding the
-// locked ruleset: Magic Kingdom first, never >3 park days in a row, the two
-// Universal Express days paired, Epic early, day 14 always a park, and an
-// alternating value/themed dining rhythm with a pre-trip booking checklist.
+// locked ruleset: Magic Kingdom first, never >3 consecutive park days, the
+// two Universal Express days paired, Epic early, and an alternating
+// value/themed dining rhythm with a pre-trip booking checklist.
+//
+// Park-day COUNT is driven by recommendDays() in tickets.js — the same
+// function the Ticket Decoder uses — so the two screens can never disagree
+// about how many Disney/Universal days a trip actually needs.
 //
 // Ride/character/show lists are editable reference data — keep them current.
+
+import { recommendDays } from "./tickets";
 
 export const PARKS = {
   mk: {
@@ -58,20 +64,18 @@ export const PARKS = {
     show: "Le Cirque Arcanus · The Untrainable Dragon",
     note: "Still in its opening era — long waits and ride downtime. Go early and lean on the Express hotel hack.",
   },
-  water: {
-    name: "Water park", resort: "", short: "Water", light: true,
-    ropeDrop: "Grab loungers early — they go fast",
-    rides: ["Headline slides", "Lazy river", "Wave pool"],
-    characters: "",
-    show: "",
-  },
 };
 
-const ROTATION = {
-  both: ["mk", "epcot", "hs", "ioa", "usf", "epic", "ak", "mk", "epcot", "water"],
-  disney: ["mk", "epcot", "hs", "ak", "mk", "epcot", "hs", "water", "ak"],
-  universal: ["ioa", "usf", "epic", "ioa", "usf", "water", "epic"],
-};
+// Variety cycles — repeat via modulo if a trip needs more days at a resort
+// than there are distinct parks to visit.
+const DISNEY_CYCLE = ["mk", "epcot", "hs", "ak"];
+const UNIVERSAL_CYCLE = ["ioa", "usf", "epic"]; // ioa+usf first & adjacent — the Express pair
+
+function buildRotation(disneyDays, universalDays) {
+  const disneyPart = Array.from({ length: disneyDays }, (_, i) => DISNEY_CYCLE[i % DISNEY_CYCLE.length]);
+  const universalPart = Array.from({ length: universalDays }, (_, i) => UNIVERSAL_CYCLE[i % UNIVERSAL_CYCLE.length]);
+  return [...disneyPart, ...universalPart]; // Disney block opens (MK first), Universal block keeps Express pair adjacent
+}
 
 const VALUE_DINNERS = ["Out-of-park value — Kids Eat Free Card", "Villa BBQ with the Walmart shop", "Cici's all-you-can-eat pizza"];
 const THEMED_DISNEY = ["T-Rex Cafe (Disney Springs)", "Cinderella's Royal Table — character meal", "Chef Mickey's — character buffet"];
@@ -84,7 +88,7 @@ const MEAL_COST = {
   quickService: 9,
   wieners: 1.25,
   publix: 6.25,
-  kennedy: 8.75,
+  kennedyLunch: 8.75,
   travelBite: 5,
   valueDinner: 7.5,
   lightDinner: 3.75,
@@ -96,37 +100,109 @@ const MEAL_COST = {
   roundupRodeo: 32.5,
 };
 
+// The Kennedy Space Center excursion needs its own admission — this is a
+// ticket cost, not a meal cost, and was previously missing entirely from
+// the day's total. ~£220 for a family of four (Rocket Garden, Atlantis, bus
+// tour); Gatorland is the honest cheaper swap, ~£90 for the same family.
+const EXCURSION_TICKET_PP = 55;
+
 function breakfastFor(accom) {
+  // Onsite Disney breakfast used to say "or a booked character meal" at the
+  // same low price as a normal buffet — misleading, since a real character
+  // breakfast runs far more (~£35pp, same as the character-meal dinners
+  // below). Split the two apart: this is just the everyday resort breakfast.
   if (accom === "hotel") return { text: "Hotel breakfast (free if your hotel includes it)", cost: 0 };
-  if (accom === "onsite") return { text: "Resort breakfast — or a booked character meal", cost: 9 };
+  if (accom === "onsite") return { text: "Resort quick-service breakfast (usually a paid extra, unlike free-breakfast hotels)", cost: 12 };
   return { text: "Self-catered at the villa — eat before you leave for rope drop", cost: 3 };
 }
 
 export function buildItinerary(profile, plan) {
   const nights = profile.nights;
   const accom = plan?.accom || "villa";
-  const rotation = ROTATION[profile.focus] || ROTATION.both;
   const heads = (profile.adults || 0) + (profile.teens || 0) + (profile.children || 0) + (profile.infants || 0) || 4;
+
+  const rec = recommendDays(profile);
+  const rawRotation = buildRotation(rec.disney, rec.universal);
+  const activeCount = Math.max(0, nights - 1); // days 2..nights
+  // A ticket can recommend more days than a trip has room for (e.g. a
+  // single-resort 14-day ticket on a 14-night trip only has 13 active days
+  // to use it in) — cap generation at what's physically possible.
+  const rotation = rawRotation.slice(0, activeCount);
+  const targetParkDays = rotation.length;
+
+  // Only include the Kennedy/beach excursion if there's still enough rest
+  // budget left to respect the max-3-consecutive-park-days rule alongside
+  // it — a short, dense single-resort trip may not have room for both.
+  const minBreaksNeeded = Math.max(0, Math.ceil(targetParkDays / 3) - 1);
+  const roomForExcursion = (activeCount - targetParkDays) > minBreaksNeeded;
+  const hasExcursion = nights >= 8 && roomForExcursion;
+  const specialTotal = targetParkDays + (hasExcursion ? 1 : 0);
+  const restBudget = Math.max(0, activeCount - specialTotal);
+
+  // Where the excursion lands — roughly the midpoint of the park GROUPS
+  // (not raw days), so it breaks up the trip rather than bookending it.
+  const excursionAfterParks = hasExcursion ? Math.ceil(targetParkDays / 2) : -1;
+
+  // Chunk the park days into groups of at most 3, guaranteeing the
+  // max-3-consecutive rule by construction. The Universal Express pair
+  // (ioa immediately followed by usf) must never be split across a group
+  // boundary — if a natural 3-item chunk would end exactly on ioa, close
+  // that chunk one item early so ioa opens the next group with usf instead.
+  const ioaIdx = rotation.indexOf("ioa");
+  const parkGroups = [];
+  let cur = [];
+  for (let i = 0; i < targetParkDays; i++) {
+    const isIoaWithUsfNext = i === ioaIdx && rotation[i + 1] === "usf";
+    if (isIoaWithUsfNext && cur.length === 2) { parkGroups.push(cur); cur = []; }
+    cur.push({ kind: "park", parkKey: rotation[i] });
+    if (cur.length >= 3) { parkGroups.push(cur); cur = []; }
+  }
+  if (cur.length) parkGroups.push(cur);
+
+  // Insert the excursion as its OWN group at a clean boundary between two
+  // park groups, rather than splicing into the middle of a run — splicing
+  // mid-run creates awkward leftover singleton groups that waste rest-day
+  // budget on extra gaps (the bug this replaced).
+  const groups = [];
+  const excursionAtGroup = hasExcursion ? Math.ceil(parkGroups.length / 2) : -1;
+  parkGroups.forEach((g, i) => {
+    groups.push(g);
+    if (hasExcursion && i + 1 === excursionAtGroup) groups.push([{ kind: "excursion" }]);
+  });
+  if (hasExcursion && excursionAtGroup >= parkGroups.length) groups.push([{ kind: "excursion" }]);
+
+  // One mandatory rest between each pair of groups (guarantees max-3);
+  // spread any surplus rest days round-robin across those same gaps rather
+  // than bunching them all at the end of the trip.
+  const numGaps = Math.max(0, groups.length - 1);
+  const gapRests = new Array(numGaps).fill(restBudget >= numGaps ? 1 : 0);
+  let surplus = Math.max(0, restBudget - numGaps);
+  const intense = restBudget < numGaps; // genuinely not enough spare days for a gentle rhythm
+  if (restBudget < numGaps) {
+    // Tight edge case: not even one mandatory rest per gap is affordable.
+    // Give what we have to the earliest gaps rather than silently drop them.
+    for (let g = 0; g < numGaps; g++) gapRests[g] = g < restBudget ? 1 : 0;
+  } else {
+    let g = 0;
+    while (surplus > 0) { gapRests[g % Math.max(1, numGaps)]++; g++; surplus--; }
+  }
+
+  const slots = [];
+  groups.forEach((group, gi) => {
+    group.forEach((item) => slots.push({ special: item }));
+    if (gi < numGaps) for (let r = 0; r < gapRests[gi]; r++) slots.push("rest");
+  });
 
   const days = [];
   const bookings = [];
-  let parkIdx = 0;
-  let consec = 0;
   let dinnerThemed = false; // alternate, starting value
-  let themedDisneyIdx = 0;
-  let themedNeutralIdx = 0;
-  let themedUniversalIdx = 0;
-  let valueIdx = 0;
+  let themedDisneyIdx = 0, themedNeutralIdx = 0, themedUniversalIdx = 0, valueIdx = 0;
   let tripTotal = 0;
 
   const bfast = breakfastFor(accom); // same breakfast situation every day, regardless of day type
+  let restDayCount = 0; // used to alternate pool days with an outlet shopping day
 
-  const activeCount = Math.max(0, nights - 1); // days 2..nights
-  const excursionAt = nights >= 8 ? Math.floor(activeCount * 0.5) : -1;
-  let excursionPlaced = false;
-
-  const nextDinner = (type, park) => {
-    // value/themed alternation across all dinners
+  const nextDinner = (park) => {
     const themed = dinnerThemed;
     dinnerThemed = !dinnerThemed;
     if (!themed) {
@@ -134,7 +210,6 @@ export function buildItinerary(profile, plan) {
       valueIdx++;
       return { text: t, kind: "value", cost: MEAL_COST.valueDinner };
     }
-    // themed
     if (park && PARKS[park]?.resort === "Universal") {
       const t = THEMED_UNIVERSAL[themedUniversalIdx % THEMED_UNIVERSAL.length];
       themedUniversalIdx++;
@@ -168,53 +243,64 @@ export function buildItinerary(profile, plan) {
 
   for (let i = 0; i < activeCount; i++) {
     const dayNum = i + 2;
-    const isLastActive = i === activeCount - 1; // day = nights → must be a park
+    const slot = slots[i];
 
-    let type = "park";
-    if (!isLastActive) {
-      if (!excursionPlaced && i === excursionAt) { type = "excursion"; excursionPlaced = true; }
-      else if (consec >= 3) type = "rest";
-    }
-
-    if (type === "rest") {
-      consec = 0;
-      const d = nextDinner("rest", null);
-      const lunchC = MEAL_COST.wieners;
+    if (!slot || slot === "rest") {
+      restDayCount++;
+      const isOutletDay = restDayCount % 2 === 0; // every 2nd rest day, once there's more than one
+      const d = nextDinner(null);
+      const lunchC = isOutletDay ? MEAL_COST.publix : MEAL_COST.wieners; // a food-court bite instead of the microwave wieners
       const dayCost = bfast.cost + lunchC + d.cost;
       tripTotal += dayCost;
       days.push({
-        day: dayNum, type: "rest", title: "Pool & rest day",
-        meals: { breakfast: bfast.text, lunch: "Walmart wieners — 1 min in the microwave, bun & sauce, pennies a head", dinner: d.text },
+        day: dayNum,
+        type: "rest",
+        title: isOutletDay ? "Outlet shopping day" : "Pool & rest day",
+        meals: {
+          breakfast: bfast.text,
+          lunch: isOutletDay ? "Food court at the outlets — easy, no cooking" : "Walmart wieners — 1 min in the microwave, bun & sauce, pennies a head",
+          dinner: d.text,
+        },
         mealCosts: { breakfast: bfast.cost * heads, lunch: lunchC * heads, dinner: d.cost * heads },
         dayCost: dayCost * heads,
         dinnerKind: d.kind, booking: d.booking,
-        tips: ["The reset that stops everyone burning out by day six", "Restless? Outlet shopping or a wander round Disney Springs"],
+        tips: isOutletDay
+          ? [
+              "Orlando Vineland Premium Outlets (near I-4/Disney) or Orlando International Premium Outlets (I-Drive) — both have genuine markdowns on US brands",
+              "A gentler day than the parks — browse, grab gifts and home essentials, and the shopping spend is already in your Budget's souvenirs line",
+              "Quieter than a park day, so it doubles as the reset — no need to rope-drop anything here",
+            ]
+          : ["The reset that stops everyone burning out — never more than 3 park days in a row", "Restless? Disney Springs or Old Town for a free evening wander"],
       });
       continue;
     }
-    if (type === "excursion") {
-      consec = 0;
-      const d = nextDinner("excursion", null);
-      const lunchC = MEAL_COST.kennedy;
+
+    if (slot.special.kind === "excursion") {
+      const d = nextDinner(null);
+      const lunchC = MEAL_COST.kennedyLunch;
       const dayCost = bfast.cost + lunchC + d.cost;
+      const ticketCost = EXCURSION_TICKET_PP * heads;
       tripTotal += dayCost;
       days.push({
-        day: dayNum, type: "excursion", title: "Kennedy Space Center / beach day",
+        day: dayNum, type: "excursion", title: "Kennedy Space Center · beach or Volcano Bay alternative",
         meals: { breakfast: bfast.text, lunch: "Picnic or a local bite", dinner: d.text },
         mealCosts: { breakfast: bfast.cost * heads, lunch: lunchC * heads, dinner: d.cost * heads },
-        dayCost: dayCost * heads,
+        ticketCost,
+        dayCost: dayCost * heads + ticketCost,
         dinnerKind: d.kind, booking: d.booking,
-        tips: ["A day out of the parks — Kennedy Space Center, or Clearwater / Cocoa beach", "Check drive times and pack plenty of water"],
+        tips: [
+          `Kennedy Space Center admission runs about £${Math.round(ticketCost)} for the whole party — Rocket Garden, Atlantis, the bus tour`,
+          "Cheaper swap: Gatorland (~£90 for the family) or a free beach day at Clearwater/Cocoa — or use a Universal day for Volcano Bay instead, already covered by the 3-park ticket",
+          "Check drive times and pack plenty of water",
+        ],
       });
       continue;
     }
 
     // park day
-    const parkKey = rotation[parkIdx % rotation.length];
-    parkIdx++;
-    consec++;
+    const parkKey = slot.special.parkKey;
     const park = PARKS[parkKey];
-    const d = nextDinner(parkKey === "water" ? null : "park", parkKey);
+    const d = nextDinner(parkKey);
 
     const tips = [];
     if (parkKey === "mk" && dayNum === 2) tips.push("First park, first magic — rope drop the headliner before the crowds land (jet lag has you up early anyway)");
@@ -238,7 +324,7 @@ export function buildItinerary(profile, plan) {
       meals: { breakfast: bfast.text, lunch, dinner: d.text },
       mealCosts: { breakfast: bfast.cost * heads, lunch: lunchC * heads, dinner: d.cost * heads },
       dayCost: dayCost * heads,
-      dinnerKind: d.kind, booking: d.booking, light: park.light,
+      dinnerKind: d.kind, booking: d.booking,
       tips,
     });
   }
@@ -257,5 +343,14 @@ export function buildItinerary(profile, plan) {
     });
   }
 
-  return { days, bookings: bookings.filter((b) => b.day), foodTotal: tripTotal * heads, heads };
+  const excursionTicketTotal = days.reduce((sum, d) => sum + (d.ticketCost || 0), 0);
+
+  return {
+    days,
+    bookings: bookings.filter((b) => b.day),
+    foodTotal: tripTotal * heads + excursionTicketTotal,
+    heads,
+    recommendedDays: rec, // exposed so the summary card can show "4 Disney + 3 Universal"
+    intensePacing: intense, // true when the trip is too tight to guarantee a gentle rest rhythm
+  };
 }
