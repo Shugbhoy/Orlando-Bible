@@ -9,7 +9,9 @@ import StayDecider from "./modules/StayDecider";
 import TicketDecoder from "./modules/TicketDecoder";
 import DealsTips from "./modules/DealsTips";
 import Itinerary from "./modules/Itinerary";
-import ComingSoon from "./modules/ComingSoon";
+import GuideMenu from "./modules/GuideMenu";
+import Accessibility from "./modules/Accessibility";
+import HeightChecker from "./modules/HeightChecker";
 
 export default function App() {
   return (
@@ -23,6 +25,9 @@ export default function App() {
             <Route path="/tickets" element={<TicketDecoder />} />
             <Route path="/deals" element={<DealsTips />} />
             <Route path="/itinerary" element={<Itinerary />} />
+            <Route path="/guide" element={<GuideMenu />} />
+            <Route path="/accessibility" element={<Accessibility />} />
+            <Route path="/height-checker" element={<HeightChecker />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <TabBar />
