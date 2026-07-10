@@ -10,8 +10,8 @@ function TabIcon({ name, on }) {
     coins: (<><ellipse cx="9" cy="7" rx="6" ry="3" {...p} /><path d="M3 7v5c0 1.7 2.7 3 6 3s6-1.3 6-3" {...p} /><ellipse cx="15" cy="14" rx="6" ry="3" {...p} /><path d="M9 17v1c0 1.7 2.7 3 6 3s6-1.3 6-3v-5" {...p} /></>),
     ticket: (<><path d="M3 8a2 2 0 012-2h14a2 2 0 012 2 2 2 0 000 4 2 2 0 000 4 2 2 0 01-2 2H5a2 2 0 01-2-2 2 2 0 000-4 2 2 0 000-4z" {...p} /><path d="M14 6v12" strokeDasharray="2 2" {...p} /></>),
     bed: (<><path d="M3 18v-6h18v6M3 12V8a2 2 0 012-2h5a2 2 0 012 2v4M3 18h18" {...p} /></>),
-    dots: (<><circle cx="5" cy="12" r="1.6" fill={col} /><circle cx="12" cy="12" r="1.6" fill={col} /><circle cx="19" cy="12" r="1.6" fill={col} /></>),
     tag: (<><path d="M3 7a2 2 0 012-2h6l8 8a2 2 0 010 3l-5 5a2 2 0 01-3 0l-8-8z" {...p} /><circle cx="8.5" cy="9.5" r="1.4" fill={col} stroke="none" /></>),
+    book: (<><path d="M4 5.5C4 4.7 4.7 4 5.5 4H11v16H5.5A1.5 1.5 0 014 18.5v-13z" {...p} /><path d="M20 5.5c0-.8-.7-1.5-1.5-1.5H13v16h5.5a1.5 1.5 0 001.5-1.5v-13z" {...p} /></>),
   };
   return <svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true">{shapes[name]}</svg>;
 }
@@ -22,6 +22,7 @@ const TABS = [
   { to: "/tickets", label: "Tickets", icon: "ticket" },
   { to: "/stay", label: "Stay", icon: "bed" },
   { to: "/deals", label: "Deals", icon: "tag" },
+  { to: "/guide", label: "Guide", icon: "book" },
 ];
 
 export default function TabBar() {
@@ -45,12 +46,12 @@ const S = {
   tabBar: {
     position: "fixed", bottom: 0, left: "50%", transform: "translateX(-50%)",
     width: "100%", maxWidth: 440, background: C.navy, display: "flex",
-    justifyContent: "space-around", padding: "8px 4px calc(10px + env(safe-area-inset-bottom))",
+    justifyContent: "space-around", padding: "8px 2px calc(10px + env(safe-area-inset-bottom))",
     boxShadow: "0 -4px 20px rgba(13,27,62,0.28)", zIndex: 20,
   },
   tab: {
     background: "none", border: "none", display: "flex", flexDirection: "column",
-    alignItems: "center", gap: 3, fontSize: 10.5, fontWeight: 600, cursor: "pointer",
+    alignItems: "center", gap: 3, fontSize: 9.8, fontWeight: 600, cursor: "pointer",
     flex: 1, padding: "2px 0",
   },
 };
