@@ -14,6 +14,8 @@ import Accessibility from "./modules/Accessibility";
 import HeightChecker from "./modules/HeightChecker";
 import WaterParks from "./modules/WaterParks";
 import PackingList from "./modules/PackingList";
+import CharacterDining from "./modules/CharacterDining";
+import RainyDay from "./modules/RainyDay";
 
 export default function App() {
   return (
@@ -32,6 +34,8 @@ export default function App() {
             <Route path="/height-checker" element={<HeightChecker />} />
             <Route path="/water-parks" element={<WaterParks />} />
             <Route path="/packing-list" element={<PackingList />} />
+            <Route path="/character-dining" element={<CharacterDining />} />
+            <Route path="/rainy-day" element={<RainyDay />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <TabBar />
