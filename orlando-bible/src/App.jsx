@@ -12,6 +12,8 @@ import Itinerary from "./modules/Itinerary";
 import GuideMenu from "./modules/GuideMenu";
 import Accessibility from "./modules/Accessibility";
 import HeightChecker from "./modules/HeightChecker";
+import WaterParks from "./modules/WaterParks";
+import PackingList from "./modules/PackingList";
 
 export default function App() {
   return (
@@ -28,6 +30,8 @@ export default function App() {
             <Route path="/guide" element={<GuideMenu />} />
             <Route path="/accessibility" element={<Accessibility />} />
             <Route path="/height-checker" element={<HeightChecker />} />
+            <Route path="/water-parks" element={<WaterParks />} />
+            <Route path="/packing-list" element={<PackingList />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
           <TabBar />
