@@ -9,8 +9,8 @@ import Header from "../components/Header";
 const ITEMS = [
   { to: "/accessibility", title: "Accessibility (DAS/AAP)", desc: "Disney's DAS and Universal's AAP, decoded side by side.", ready: true, icon: "heart" },
   { to: "/height-checker", title: "Height Checker", desc: "Enter a height, see exactly which rides are in.", ready: true, icon: "ruler" },
-  { to: "/packing-list", title: "Packing List", desc: "UK → Florida, tickable, nothing forgotten.", ready: false, icon: "bag" },
-  { to: "/water-parks", title: "Water Parks", desc: "Volcano Bay, Typhoon Lagoon, Blizzard Beach & Aquatica compared.", ready: false, icon: "wave" },
+  { to: "/packing-list", title: "Packing List", desc: "UK → Florida, tickable, nothing forgotten.", ready: true, icon: "bag" },
+  { to: "/water-parks", title: "Water Parks", desc: "Volcano Bay, Typhoon Lagoon, Blizzard Beach & Aquatica compared.", ready: true, icon: "wave" },
   { to: "/character-dining", title: "Character Dining", desc: "Which meals are worth it, prices, and the 60-day booking window.", ready: false, icon: "fork" },
   { to: "/rainy-day", title: "Rainy Day Plan", desc: "What stays open, indoor rides ranked, the CityWalk fallback.", ready: false, icon: "cloud" },
   { to: "/baby-toddler", title: "Baby & Toddler", desc: "Rider Switch, Baby Care Centers, and what to pack.", ready: false, icon: "baby" },
